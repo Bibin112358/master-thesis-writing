@@ -1,0 +1,405 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.8\baselineskip}
+
+\title{Thesis Draft Structure}
+\author{}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section*{Abstract}
+
+\section*{Acknowledgements}
+
+\section{Introduction}
+\subsection{Background}
+\subsection{Motivation}
+\subsection{Contribution}
+
+\section{Upgrading Boogie}
+\subsection{State before}
+\subsection{Methodology}
+\subsection{Changes}
+\subsubsection{Normal changes}
+\subsubsection{SMT change}
+\subsubsection{CLI change}
+
+\section{Why did we choose Boogie Maps}
+
+\section{Support Boogie Maps}
+
+\subsection{Semantics of Boogie Maps [Early Notes]}
+[TODO ref Boogie manual]\
+[TODO ref git issue claiming outdated manual]
+
+\subsubsection{Select [Early Notes]}
+The primary operation for Boogie maps is the selection of a value associated with a specific key.
+While similar operations in other contexts are referred to as application (lambda calculus), lookup (Java), or reading (array axioms), [TODO ref to all three?]
+we adhere to the term \emph{select} to maintain consistency with the Boogie language specification.
+
+[TODO explain Boogie select semantics informally according to the outdated manual]
+
+\subsection{Goals to Support}
+\subsubsection*{Want}
+\begin{itemize}[leftmargin=1.5em]
+  \item parameterized
+\end{itemize}
+
+\subsubsection*{Ok Limitations}
+\begin{itemize}[leftmargin=1.5em]
+  \item polymorphic
+  \item arbitrary nesting levels
+\end{itemize}
+
+\subsection{SMT VC axioms}
+
+\subsection{Where to start [Proofread]}
+In the Boogie semantics, maps are treated as first-class values.
+Consequently, the initial step in supporting them involves extending the existing value datatype.
+The current definition for literals and values is as follows:
+
+\begin{verbatim}
+datatype lit =  LBool bool  | LInt int | LReal real
+
+(* The values (and as a result the semantics) are parametrized by the carrier type 'a for the
+abstract values (values that have a type constructed via type constructors) *)
+
+datatype 'a val = LitV lit | AbsV (the_absv: 'a)
+\end{verbatim}
+
+To incorporate Boogie Maps, we must introduce a new constructor to this datatype:
+
+\begin{verbatim}
+datatype 'a val = LitV lit | AbsV (the_absv: 'a) | MapV ?
+\end{verbatim}
+
+The question now is, what should we put in place of \texttt{?}?
+
+\subsection{Design Challenges: Cantor's Theorem [Proofread]}
+A naive approach to representing map values would involve a direct recursive definition:
+
+\begin{verbatim}
+datatype 'a val = LitV lit | AbsV (the_absv: 'a) | MapV "'a val => 'a val"
+\end{verbatim}
+
+However, Isabelle/HOL rejects this definition.
+This is not a technical limitation of the tool, but a fundamental logical constraint.
+Such a definition contradicts Cantor's Theorem,
+which states that the cardinality of a function space $A \implies A$ is strictly greater than the cardinality of $A$.
+Since the constructor \texttt{MapV} would imply an injective function from the function space back into the value type,
+it would lead to a logical inconsistency.
+
+Notably, the issue arises specifically from the recursive occurrence of \texttt{'a val} in the domain (the left-hand side) of the function.
+While a constructor like \texttt{bool => 'a val} is permissible, \texttt{'a val => bool} is not.
+
+\subsection{The Stratification Solution [Proofread]}
+To resolve the conflict between recursion and cardinality, we propose an ``explicit unrolling'' of the recursion on the domain.
+This creates a hierarchy of values:
+
+\begin{itemize}[leftmargin=1.5em]
+  \item Level 0: Contains only primitive values: literal and abstract values.
+  \item Level 1: Maps that accept Level 0 keys and return Level 0 or Level 1 values.
+  \item Level 2: Maps that accept Level 0 or Level 1 keys and return Level 0, Level 1 or Level 2 values.
+  \item Level $n$: Maps where keys are of Level $\le n-1$ and return values are of Level $\le n$.
+\end{itemize}
+
+[TODO visualization similar to this:]
+\begin{figure}[h]
+  \centering
+  \IfFileExists{map-viz.png}{%
+    \includegraphics[width=0.75\linewidth]{map-viz.png}%
+  }{%
+    \fbox{\parbox[c][4cm][c]{0.75\linewidth}{\centering map-viz.png placeholder}}
+  }
+  \caption{Stratified map-value hierarchy (placeholder).}
+\end{figure}
+
+This approach requires the user to specify the required nesting depth when defining the semantics.
+
+To ensure the semantics can represent complex, nested Boogie map types,
+it is essential that each level $n$ is cumulative, incorporating all preceding levels.
+This allows the model to support maps where the keys or values are themselves maps of a lower level.
+For instance, representing types such as \texttt{[int][[int]int]int} or \texttt{[[[int]int]int]int}.
+
+\subsubsection{Program dependent semantics [Early Draft]}
+\begin{itemize}[leftmargin=1.5em]
+  \item [TODO currently fixed at 3 levels]
+  \item [TODO explain program dependent semantics or just limitation]
+\end{itemize}
+
+A notable characteristic of this approach is that the value semantics are program-dependent.
+Currently, the implementation is fixed at three levels of nesting.
+While this serves as a practical limitation for the current prototype,
+it is theoretically extensible to any finite depth required by a target Boogie program.
+
+\subsubsection{Datatype Construction [Proofread]}
+The stratified hierarchy could be implemented by defining discrete datatypes for each level:
+
+\begin{verbatim}
+datatype 'a val0 = LitV0 lit | AbsV0 (the_absv: 'a)
+datatype 'a val1 = MapV1 "'a val0 => ('a val1 + 'a val0)"
+datatype 'a val2 = MapV2 "('a val1 + 'a val0) => ('a val2 + 'a val1 + 'a val0)"
+datatype 'a val3 = MapV3 "('a val2 + 'a val1 + 'a val0) => ('a val3 + 'a val2 + 'a val1 + 'a val0)"
+\end{verbatim}
+
+To minimize redundancy and improve maintainability, we introduce a helper datatype, \texttt{'k L},
+which represents a functional map layer.
+We then construct the hierarchy using type synonyms:
+
+\begin{verbatim}
+(* TODO explain L *)
+datatype 'k L = FunL "'k => 'k L + 'k"
+
+datatype 'a val0 = LitV0 lit | AbsV0 (the_absv: 'a)
+type synonym 'a val1 = "'a val0 L"
+type_synonym 'a val2 = "('a val1 + 'a val0) L"
+type_synonym 'a val3 = "('a val2 + 'a val1 + 'a val0) L"
+type synonym 'a val3210 = "'a val3 + 'a val2 + 'a val1 + 'a val0"
+\end{verbatim}
+
+To integrate these stratified levels into the core semantics,
+we extend the primary \texttt{val} datatype with a generic \texttt{MapV} constructor.
+By utilizing a second type parameter, \texttt{'m}, we decouple the value definition from the specific map implementation:
+
+\begin{verbatim}
+datatype ('a, 'm) val = LitV lit | AbsV (the_absv: 'a) | MapV 'm
+\end{verbatim}
+
+This allows us to instantiate the semantics with a specific number of levels:
+
+\begin{verbatim}
+type synonym 'a val321  = "'a val3 + 'a val2 + 'a val1"
+type synonym 'a valn = "('a, 'a val321) val"
+\end{verbatim}
+
+Notably, \texttt{'a val0} is excluded from the \texttt{MapV} constructor,
+as these represent primitive literals and abstract values which are semantically distinct from map-based values.
+
+However, establishing the datatype is only the foundational step;
+we must subsequently define the functional operations and verify that they satisfy the required Boogie array axioms.
+[TODO ref SMT VC array axioms]
+
+\subsubsection{Type of Values [Proofread]}
+A critical component of the value semantics, particularly for map operations such as \texttt{store} [TODO ref] and well-formedness [TODO ref],
+is the \texttt{type\_of\_val} function.
+This function determines the corresponding Boogie type for any given value within the semantics.
+To support Boogie maps, the existing type definition must be extended to include a map type constructor:
+
+\begin{verbatim}
+datatype prim_ty
+ = TBool | TInt | TReal
+
+type_synonym tcon_id = string (* type constructor id *)
+
+datatype ty
+  = TVar nat | (* type variables as de-bruijn indices *)
+    TPrim prim_ty | (* primitive types *)
+    TCon tcon_id "ty list" (* type constructor *) |
+    TMap ty ty (* maps *)
+\end{verbatim}
+
+As the current implementation is limited to single-arity maps, the \texttt{TMap} constructor requires only two arguments:
+the key type and the value type.
+Supporting multi-arity maps would necessitate representing the keys as a list of types,
+but the current dual-type representation is sufficient for our defined goals. [TODO ref goals]
+
+\paragraph{Type Ambiguity [Proofread]}
+A challenge arises when implementing type extraction for map values.
+Because our functional modeling of maps is so general,
+a single internal Isabelle function could represent multiple distinct Boogie map types.
+For instance, a map of type \texttt{val1} might contain a function mapping integers and booleans to integers and booleans,
+making it impossible to distinguish from the outside whether it represents
+a \texttt{[int]int}, \texttt{[bool]bool}, or \texttt{[int]bool} map.
+
+To resolve this ambiguity, we explicitly store the intended key and value types within the map datatype:
+
+\begin{verbatim}
+datatype 'k L = FunL "'k => 'k L + 'k" ty ty
+\end{verbatim}
+
+While this ensures that every map value carries explicit type information,
+it introduces a potential discrepancy:
+there is no inherent semantic connection between the stored types and the actual behavior of the Isabelle function.
+For example, a value could be tagged as \texttt{[bool]bool} while the underlying function operates on integers.
+This consistency requirement is addressed later through the definition of well-formedness invariants. [TODO ref wf]
+
+\paragraph{Accessor Functions for Map Types [Proofread]}
+With the inclusion of explicit type tags,
+we can define helper functions to extract the constituent types from a map type.
+These functions are essential for the subsequent implementation of map operations:
+
+\begin{verbatim}
+fun key_ty where "key_ty (TMap tk _) = tk" | "key_ty _ = undefined"
+fun val_ty where "val_ty (TMap _ tv) = tv" | "val_ty _ = undefined"
+\end{verbatim}
+
+Detailed definitions for the full \texttt{type\_of\_val} logic are provided in the appendix. [TODO ref]
+
+\subsubsection{Constrained Types [Early Notes]}
+\begin{itemize}[leftmargin=1.5em]
+  \item current definition too general
+  \item will need some additional invariants that the map values need to fulfill
+  \item with these invariants, we can create a constrained type using typedef [TODO ref to Typedef and lifting] [TODO ref typedef in Isabelle]
+\end{itemize}
+
+\subsubsection{Type Safety [Early Draft]}
+From [TODO ref SMT VC axioms, specific axiom] we need the property,
+that if we select from a map using a key of the key type of the map,
+then the result is of the value type of the map:
+
+\begin{verbatim}
+(ALL k. type_of_val k = key_ty (type_of_val m) --> type_of_val (selectImpl m k) = val_ty (type_of_val m))
+\end{verbatim}
+
+(assuming we have \texttt{selectImpl}, which we will see later [TODO ref Select]).
+
+This property does not hold for our current \texttt{valn} definition,
+as it just maps from values to values, regardless of their type.
+
+[TODO mention why it is hard to do that structurally using datatypes only?]
+
+We will actually enforce a stronger condition:
+
+\begin{verbatim}
+(ALL k. type_of_val (selectImpl m k) = val_ty (type_of_val m))
+\end{verbatim}
+
+The reason can be found in the next section [TODO ref No Duplicate representation].
+
+\subsubsection{No Duplicate representation [Early Notes]}
+\begin{itemize}[leftmargin=1.5em]
+  \item we want a unique Isabelle representation for each Boogie map
+  \item why? otherwise equality might not behave as we would expect
+  \item currently two problems
+  \item problem 1: a high-level map could model a low-level map
+  \item solution 1: \texttt{wf\_ty}, might be implied by type safety [TODO ref] but easier to explicitly list
+  \item problem 2: the function representation might differ outside the relevant domain
+  \item solution 2: force default value in these cases
+  \item why does the default value need to be of the correct value?
+  \item \texttt{wf} may not recurse in a negative position [TODO citation needed? or just explain?]
+  \item so it is hard to cleanly case-distinct on \texttt{wf k}, which is why it is easier to enforce both conditions in the fuzzy zone
+  \item [TODO picture of table showing the fuzzy border]
+\end{itemize}
+
+\subsubsection{Closed [Early Notes]}
+\begin{itemize}[leftmargin=1.5em]
+  \item if we have constrained type, and use operations like select/store, the result should be constrained again, i.e. fulfill the invariant
+  \item so we need select to be closed
+  \item not true in general, as the result might be a bad map, [TODO example?]
+  \item desired property: \texttt{(ALL k. wf k --> wf (selectImpl m k))}
+  \item not possible, as \texttt{wf k} appears in negative position
+  \item could make stronger by replacing with \texttt{wf\_ty k}
+  \item or just \texttt{(ALL k. wf (selectImpl m k))}, enforcing that the result is always \texttt{wf}, no matter if the key is or not
+  \item the closedness of store is a derived property now
+\end{itemize}
+
+\subsubsection{Well Formed Definition [Early Notes]}
+[TODO this before select/store, with an assumed select, as this design decision affects select/store]
+
+\begin{verbatim}
+inductive wf where
+    wfLitV: "wf (LitV v)" | wfAbsV: "wf (AbsV v)" |
+    wfMapV: "[| wf_ty m;  (ALL k. wf (selectImpl m k));
+      (ALL k. (~wf k | type_of_val k != key_ty (type_of_val m)) --> (selectImpl m k) = val_of_type (val_ty (type_of_val m)));
+      (ALL k. type_of_val (selectImpl m k) = val_ty (type_of_val m))
+      |] ==> wf m"
+\end{verbatim}
+
+\subsubsection{Conversion from and to internal datatype [Early notes]}
+[TODO should this just be in the appendix?]
+
+For our map semantics we introduced these different levels. [TODO ref Solution]
+These only matter here, so we want to hide this implementation detail from the rest of the semantics.
+That is why we made the val datatype so generic [TODO ref datatype ('a, 'm) val].
+
+Therefore, we need a way to translate the instantiated version of the generic val datatype,
+into our level representation:
+
+[TODO potentially simplify sum semantics, i.e. Inr (Inl x) -> In2 x]
+\begin{verbatim}
+fun toVal3210 :: "'a valn => 'a val3210" where
+    "toVal3210 (LitV v) = (Inr (Inr (Inr (LitV0 v))))"
+  | "toVal3210 (AbsV v) = (Inr (Inr (Inr (AbsV0 v))))"
+  | "toVal3210 (MapV (Inr (Inr m))) = (Inr (Inr (Inl m)))"
+  | "toVal3210 (MapV (Inr (Inl m))) = (Inr (Inl m))"
+  | "toVal3210 (MapV (Inl m)) = (Inl m)"
+
+fun val3ToValn :: "'a val3210 => 'a valn" where
+    "val3ToValn (Inr (Inr (Inr (LitV0 v)))) = (LitV v)"
+  | "val3ToValn (Inr (Inr (Inr (AbsV0 v)))) = (AbsV v)"
+  | "val3ToValn (Inr (Inr (Inl m))) = (MapV (Inr (Inr m)))"
+  | "val3ToValn (Inr (Inl m)) = (MapV (Inr (Inl m)))"
+  | "val3ToValn (Inl m) = (MapV (Inl m))"
+\end{verbatim}
+
+\subsubsection{Select [Early Notes]}
+Now we can define a select function for our current map semantics.
+
+First, we define an auxiliary function, that performs the operation on our internal representation:
+
+[TODO potentially simplify semantics: remove primitive cases, move default case to non-aux function to avoid conversions]
+\begin{verbatim}
+fun selectImplAux :: "'a::absval val3210 => 'a val3210 => 'a val3210" where
+    "selectImplAux (Inr (Inr (Inr (LitV0 v)))) _ = (Inr (Inr (Inr undefined)))"
+  | "selectImplAux (Inr (Inr (Inr (AbsV0 v)))) _ = (Inr (Inr (Inr undefined)))"
+  | "selectImplAux (Inr (Inr (Inl (FunL m _ _)))) (Inr (Inr (Inr k))) = Inr (Inr (m k))"
+  | "selectImplAux (Inr (Inl (FunL m _ _))) (Inr (Inr k)) = Inr (m k)"
+  | "selectImplAux (Inl (FunL m _ _)) (Inr k) = (m k)"
+  | "selectImplAux m _ = toVal3210 (val_of_type (val_ty (type_of_val (val3ToValn m))))"
+\end{verbatim}
+
+\texttt{absval} is a type class, that is needed to call \texttt{type\_of\_val}.
+This is addressed later in the section [TODO ref other changes].
+
+Let's focus on \texttt{"selectImplAux (Inr (Inl (FunL m \_ \_))) (Inr (Inr k)) = Inr (m k)"}
+\ldots
+
+Primitive [TODO ref wf]
+
+default [TODO ref wf]
+
+\subsubsection{Store}
+
+\subsubsection{Well Formed}
+
+\subsubsection{Showing one wf map?}
+Appendix?
+
+\subsubsection{Proving Axioms}
+Proofs in Appendix?
+
+\subsubsection{Typedef and lifting}
+
+\subsubsection{Final Lemmas (for VC phases and so on)}
+
+\subsection{Alternative Approaches}
+
+\subsection{Adjusting Proofgen Module}
+
+\section{Evaluation}
+
+\section{Future Work}
+
+\section{Conclusion/Summary}
+
+\section*{Bibliography}
+\section*{List of figures/tables}
+\section*{Agreements}
+\subsection*{of independence}
+\subsection*{AI usage}
+
+\appendix
+\section{Appendix}
+
+\end{document}
