@@ -10,13 +10,18 @@
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{0.8\baselineskip}
 
-\title{Thesis Draft Structure}
-\author{}
-\date{}
+\title{Evolving and Extending Certificate Generation for a Program Verifier}
+\author{Bibin Muttappillil}
+\date{2026 April 16th}
 
 \begin{document}
 
 \maketitle
+
+\begin{center}
+Supervisors: Yushuo Xiao and Prof.~Dr.~Peter M\"uller
+\end{center}
+
 
 \section*{Abstract}
 
@@ -38,6 +43,7 @@
 \section{Why did we choose Boogie Maps}
 
 \section{Support Boogie Maps}
+\label{sec:support-boogie-maps}
 
 \subsection{Semantics of Boogie Maps [Early Notes]}
 [TODO ref Boogie manual]\
@@ -51,6 +57,7 @@ we adhere to the term \emph{select} to maintain consistency with the Boogie lang
 [TODO explain Boogie select semantics informally according to the outdated manual]
 
 \subsection{Goals to Support}
+\label{sec:goals-to-support}
 \subsubsection*{Want}
 \begin{itemize}[leftmargin=1.5em]
   \item parameterized
@@ -63,8 +70,10 @@ we adhere to the term \emph{select} to maintain consistency with the Boogie lang
 \end{itemize}
 
 \subsection{SMT VC axioms}
+\label{sec:smt-vc-axioms}
 
 \subsection{Where to start [Proofread]}
+\label{sec:where-to-start}
 In the Boogie semantics, maps are treated as first-class values.
 Consequently, the initial step in supporting them involves extending the existing value datatype.
 The current definition for literals and values is as follows:
@@ -104,6 +113,7 @@ Notably, the issue arises specifically from the recursive occurrence of \texttt{
 While a constructor like \texttt{bool => 'a val} is permissible, \texttt{'a val => bool} is not.
 
 \subsection{The Stratification Solution [Proofread]}
+\label{sec:stratification-solution}
 To resolve the conflict between recursion and cardinality, we propose an ``explicit unrolling'' of the recursion on the domain.
 This creates a hierarchy of values:
 
@@ -144,6 +154,7 @@ While this serves as a practical limitation for the current prototype,
 it is theoretically extensible to any finite depth required by a target Boogie program.
 
 \subsubsection{Datatype Construction [Proofread]}
+\label{sec:datatype-construction}
 The stratified hierarchy could be implemented by defining discrete datatypes for each level:
 
 \begin{verbatim}
@@ -188,10 +199,11 @@ as these represent primitive literals and abstract values which are semantically
 
 However, establishing the datatype is only the foundational step;
 we must subsequently define the functional operations and verify that they satisfy the required Boogie array axioms.
-[TODO ref SMT VC array axioms]
+See Section~\ref{sec:smt-vc-axioms}.
 
 \subsubsection{Type of Values [Proofread]}
-A critical component of the value semantics, particularly for map operations such as \texttt{store} [TODO ref] and well-formedness [TODO ref],
+\label{sec:type-of-values}
+A critical component of the value semantics, particularly for map operations such as \texttt{store} (Section~\ref{sec:store}) and well-formedness (Section~\ref{sec:wf-definition}),
 is the \texttt{type\_of\_val} function.
 This function determines the corresponding Boogie type for any given value within the semantics.
 To support Boogie maps, the existing type definition must be extended to include a map type constructor:
@@ -212,7 +224,7 @@ datatype ty
 As the current implementation is limited to single-arity maps, the \texttt{TMap} constructor requires only two arguments:
 the key type and the value type.
 Supporting multi-arity maps would necessitate representing the keys as a list of types,
-but the current dual-type representation is sufficient for our defined goals. [TODO ref goals]
+but the current dual-type representation is sufficient for our defined goals (Section~\ref{sec:goals-to-support}).
 
 \paragraph{Type Ambiguity [Proofread]}
 A challenge arises when implementing type extraction for map values.
@@ -232,7 +244,7 @@ While this ensures that every map value carries explicit type information,
 it introduces a potential discrepancy:
 there is no inherent semantic connection between the stored types and the actual behavior of the Isabelle function.
 For example, a value could be tagged as \texttt{[bool]bool} while the underlying function operates on integers.
-This consistency requirement is addressed later through the definition of well-formedness invariants. [TODO ref wf]
+This consistency requirement is addressed later through the definition of well-formedness invariants (Section~\ref{sec:wf-definition}).
 
 \paragraph{Accessor Functions for Map Types [Proofread]}
 With the inclusion of explicit type tags,
@@ -244,17 +256,19 @@ fun key_ty where "key_ty (TMap tk _) = tk" | "key_ty _ = undefined"
 fun val_ty where "val_ty (TMap _ tv) = tv" | "val_ty _ = undefined"
 \end{verbatim}
 
-Detailed definitions for the full \texttt{type\_of\_val} logic are provided in the appendix. [TODO ref]
+Detailed definitions for the full \texttt{type\_of\_val} logic are provided in Appendix~\ref{sec:appendix}.
 
 \subsubsection{Constrained Types [Early Notes]}
+\label{sec:constrained-types}
 \begin{itemize}[leftmargin=1.5em]
   \item current definition too general
   \item will need some additional invariants that the map values need to fulfill
-  \item with these invariants, we can create a constrained type using typedef [TODO ref to Typedef and lifting] [TODO ref typedef in Isabelle]
+  \item with these invariants, we can create a constrained type using \texttt{typedef} and lifting (Section~\ref{sec:typedef-lifting})
 \end{itemize}
 
 \subsubsection{Type Safety [Early Draft]}
-From [TODO ref SMT VC axioms, specific axiom] we need the property,
+\label{sec:type-safety}
+From the SMT VC axioms (Section~\ref{sec:smt-vc-axioms}), we need the property
 that if we select from a map using a key of the key type of the map,
 then the result is of the value type of the map:
 
@@ -262,7 +276,7 @@ then the result is of the value type of the map:
 (ALL k. type_of_val k = key_ty (type_of_val m) --> type_of_val (selectImpl m k) = val_ty (type_of_val m))
 \end{verbatim}
 
-(assuming we have \texttt{selectImpl}, which we will see later [TODO ref Select]).
+(assuming we have \texttt{selectImpl}, which is introduced in Section~\ref{sec:select}).
 
 This property does not hold for our current \texttt{valn} definition,
 as it just maps from values to values, regardless of their type.
@@ -275,15 +289,16 @@ We will actually enforce a stronger condition:
 (ALL k. type_of_val (selectImpl m k) = val_ty (type_of_val m))
 \end{verbatim}
 
-The reason can be found in the next section [TODO ref No Duplicate representation].
+The reason is discussed in Section~\ref{sec:no-duplicate}.
 
 \subsubsection{No Duplicate representation [Early Notes]}
+\label{sec:no-duplicate}
 \begin{itemize}[leftmargin=1.5em]
   \item we want a unique Isabelle representation for each Boogie map
   \item why? otherwise equality might not behave as we would expect
   \item currently two problems
   \item problem 1: a high-level map could model a low-level map
-  \item solution 1: \texttt{wf\_ty}, might be implied by type safety [TODO ref] but easier to explicitly list
+  \item solution 1: \texttt{wf\_ty}, which might be implied by type safety (Section~\ref{sec:type-safety}) but is easier to list explicitly
   \item problem 2: the function representation might differ outside the relevant domain
   \item solution 2: force default value in these cases
   \item why does the default value need to be of the correct value?
@@ -293,6 +308,7 @@ The reason can be found in the next section [TODO ref No Duplicate representatio
 \end{itemize}
 
 \subsubsection{Closed [Early Notes]}
+\label{sec:closed}
 \begin{itemize}[leftmargin=1.5em]
   \item if we have constrained type, and use operations like select/store, the result should be constrained again, i.e. fulfill the invariant
   \item so we need select to be closed
@@ -305,7 +321,8 @@ The reason can be found in the next section [TODO ref No Duplicate representatio
 \end{itemize}
 
 \subsubsection{Well Formed Definition [Early Notes]}
-[TODO this before select/store, with an assumed select, as this design decision affects select/store]
+\label{sec:wf-definition}
+This section should conceptually appear before Sections~\ref{sec:select} and~\ref{sec:store}, because this design decision affects both operations.
 
 \begin{verbatim}
 inductive wf where
@@ -317,11 +334,12 @@ inductive wf where
 \end{verbatim}
 
 \subsubsection{Conversion from and to internal datatype [Early notes]}
+\label{sec:conversion-internal}
 [TODO should this just be in the appendix?]
 
-For our map semantics we introduced these different levels. [TODO ref Solution]
+For our map semantics, we introduced these different levels (Section~\ref{sec:stratification-solution}).
 These only matter here, so we want to hide this implementation detail from the rest of the semantics.
-That is why we made the val datatype so generic [TODO ref datatype ('a, 'm) val].
+That is why we made the \texttt{val} datatype generic (Section~\ref{sec:datatype-construction}).
 
 Therefore, we need a way to translate the instantiated version of the generic val datatype,
 into our level representation:
@@ -344,6 +362,7 @@ fun val3ToValn :: "'a val3210 => 'a valn" where
 \end{verbatim}
 
 \subsubsection{Select [Early Notes]}
+\label{sec:select}
 Now we can define a select function for our current map semantics.
 
 First, we define an auxiliary function, that performs the operation on our internal representation:
@@ -360,16 +379,17 @@ fun selectImplAux :: "'a::absval val3210 => 'a val3210 => 'a val3210" where
 \end{verbatim}
 
 \texttt{absval} is a type class, that is needed to call \texttt{type\_of\_val}.
-This is addressed later in the section [TODO ref other changes].
+This is addressed later in Section~\ref{sec:proofgen-module}.
 
 Let's focus on \texttt{"selectImplAux (Inr (Inl (FunL m \_ \_))) (Inr (Inr k)) = Inr (m k)"}
 \ldots
 
-Primitive [TODO ref wf]
+Primitive (see Section~\ref{sec:wf-definition})
 
-default [TODO ref wf]
+default (see Section~\ref{sec:wf-definition})
 
 \subsubsection{Store}
+\label{sec:store}
 
 \subsubsection{Well Formed}
 
@@ -380,12 +400,14 @@ Appendix?
 Proofs in Appendix?
 
 \subsubsection{Typedef and lifting}
+\label{sec:typedef-lifting}
 
 \subsubsection{Final Lemmas (for VC phases and so on)}
 
 \subsection{Alternative Approaches}
 
 \subsection{Adjusting Proofgen Module}
+\label{sec:proofgen-module}
 
 \section{Evaluation}
 
@@ -401,5 +423,6 @@ Proofs in Appendix?
 
 \appendix
 \section{Appendix}
+\label{sec:appendix}
 
 \end{document}
