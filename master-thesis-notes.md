@@ -33,18 +33,18 @@
 ## Support Boogie Maps
 
 
-### Semantics of Boogie Maps
+### Semantics of Boogie Maps [Early Notes]
 
 [TODO ref Boogie manual]
 [TODO ref git issue claiming outdated manual]
 
-#### Select
+#### Select [Early Notes]
 
-Arguably, the most important operation of Boogie Maps is selecting from a map.
-This operation might also be known under different names,
-like get [TODO ref, Java?], read [TODO ref array axioms], apply [TODO ref lambda calculus], [TODO more?]
+The primary operation for Boogie maps is the selection of a value associated with a specific key.
+While similar operations in other contexts are referred to as application (lambda calculus), lookup (Java), or reading (array axioms), [TODO ref to all three?]
+we adhere to the term *select* to maintain consistency with the Boogie language specification.
 
-We will use select from now on, as the Boogie developers use this word as well [TODO ref Boogie manual]
+[TODO explain Boogie select semantics informally according to the outdated manual]
 
 
 ### Goals to Support
@@ -60,25 +60,22 @@ We will use select from now on, as the Boogie developers use this word as well [
 ### SMT VC axioms
 
 
-### Where to start
+### Where to start [Proofread]
 
-Boogie Maps are values.
-So the first step is to adjust the value type in our semantics to include Boogie Maps.
-This is the current value datatype in the semantics:
+In the Boogie semantics, maps are treated as first-class values.
+Consequently, the initial step in supporting them involves extending the existing value datatype.
+The current definition for literals and values is as follows:
 
 ```haskell
 datatype lit =  LBool bool  | LInt int | LReal real
 
-text \<open>The values (and as a result the semantics) are parametrized by the carrier type 'a for the 
-abstract values (values that have a type constructed via type constructors)\<close>
+(* The values (and as a result the semantics) are parametrized by the carrier type 'a for the 
+abstract values (values that have a type constructed via type constructors) *)
 
 datatype 'a val = LitV lit | AbsV (the_absv: 'a)
 ```
 
-We can see a literal constructor (for boolean, integers and real numbers) and an Isabelle type parameterized constructor for the abstract values
-TODO ref to Boogie Abstract values section
-
-We want to adjust this datatype with a new constructor:
+To incorporate Boogie Maps, we must introduce a new constructor to this datatype:
 
 ```haskell
 datatype 'a val = LitV lit | AbsV (the_absv: 'a) | MapV ?
@@ -87,54 +84,60 @@ datatype 'a val = LitV lit | AbsV (the_absv: 'a) | MapV ?
 The question now is, what should we put in place of `?`?
 
 
-### Some initial ideas and why they don't work
+### Design Challenges: Cantor’s Theorem [Proofread]
 
-Intuitively we would want something like this:
+A naive approach to representing map values would involve a direct recursive definition:
 
 ```haskell
 datatype 'a val = LitV lit | AbsV (the_absv: 'a) | MapV "'a val ⇒ 'a val"
 ```
 
-But Isabelle rejects this.
-This is not a technical limitation, but a logical one.
+However, Isabelle/HOL rejects this definition.
+This is not a technical limitation of the tool, but a fundamental logical constraint.
+Such a definition contradicts Cantor’s Theorem,
+which states that the cardinality of a function space $A \implies A$ is strictly greater than the cardinality of $A$.
+Since the constructor `MapV` would imply an injective function from the function space back into the value type,
+it would lead to a logical inconsistency.
 
-It contradicts Cantor's theorem, as the cardinality for `"'a val ⇒ 'a val"` is strictly larger than `'a val`,
-but `MapV` would provide an injective function from `"'a val ⇒ 'a val"` to `'a val`.
-[TODO explain more in detail?]
-
-Note, that the problem is only the recursive occurrence of `"'a val"` as the domain of the function, not the image, e.g.
-`MapV "'a val ⇒ bool"` is not fine, whereas `MapV "bool ⇒ 'a val"` is fine.
-
-
-### Solution [Draft]
-
-The main idea to resolve the above mentioned issue, is to "explicitly unroll" the recursion on the left-hand-side,
-and thereby creating different levels of maps.
-Level 0: Just primitive values, meaning literal values and abstract values.
-Level 1: Maps that take Level 0 values as keys and Level 0 or Level 1 values as map values.
-Level 2: Maps that take Level 0 or Level 1 values as keys and Level 0, 1 or 2 values as map values.
-
-In general:
-Level n: Maps that take values of Level <= n-1 as values as keys and have map values of level <= n.
-
-[TODO visualization]
-
-Note, it is important to include all previous levels, as we want to be able to model maps
-from level 0 to level 2 and vice versa, e.g.
-`[int][[int]int]int` and `[[[int]int]int]int`
-
-With this approach, one has to explicitly tell define how many levels one wants when defining the semantics.
+Notably, the issue arises specifically from the recursive occurrence of `'a val` in the domain (the left-hand side) of the function.
+While a constructor like `bool ⇒ 'a val` is permissible, `'a val ⇒ bool` is not.
 
 
-#### Program dependent semantics [Early Notes]
+### The Stratification Solution [Proofread]
+
+To resolve the conflict between recursion and cardinality, we propose an "explicit unrolling" of the recursion on the domain.
+This creates a hierarchy of values:
+
+* Level 0: Contains only primitive values: literal and abstract values.
+* Level 1: Maps that accept Level 0 keys and return Level 0 or Level 1 values.
+* Level 2: Maps that accept Level 0 or Level 1 keys and return Level 0, Level 1 or Level 2 values
+* Level n: Maps where keys are of Level ≤ n−1 and return values are of Level ≤ n.
+
+[TODO visualization similar to this:]
+![image](map-viz.png)
+
+This approach requires the user to specify the required nesting depth when defining the semantics.
+
+To ensure the semantics can represent complex, nested Boogie map types,
+it is essential that each level $n$ is cumulative, incorporating all preceding levels.
+This allows the model to support maps where the keys or values are themselves maps of a lower level.
+For instance, representing types such as `[int][[int]int]int` or `[[[int]int]int]int`.
+
+
+#### Program dependent semantics [Early Draft]
 
 - [TODO currently fixed at 3 levels]
 - [TODO explain program dependent semantics or just limitation]
 
+A notable characteristic of this approach is that the value semantics are program-dependent.
+Currently, the implementation is fixed at three levels of nesting.
+While this serves as a practical limitation for the current prototype,
+it is theoretically extensible to any finite depth required by a target Boogie program.
 
-#### Datatype [Draft]
 
-This could be achieved with something like this:
+#### Datatype Construction [Proofread]
+
+The stratified hierarchy could be implemented by defining discrete datatypes for each level:
 
 ```haskell
 datatype ’a val0 = LitV0 lit | AbsV0 (the_absv: ’a)
@@ -143,8 +146,9 @@ datatype ’a val2 = MapV2 "('a val1 + ’a val0) => ('a val2 + 'a val1 + ’a v
 datatype ’a val3 = MapV3 "('a val2 + 'a val1 + ’a val0) => ('a val3 + 'a val2 + 'a val1 + ’a val0)"
 ```
 
-To avoid creating many similar datatypes, we introduced a helper datatype
-and then build the different levels using type synonyms:
+To minimize redundancy and improve maintainability, we introduce a helper datatype, `'k L`,
+which represents a functional map layer.
+We then construct the hierarchy using type synonyms:
 
 ```haskell
 (* TODO explain L *)
@@ -157,33 +161,34 @@ type_synonym 'a val3 = "(’a val2 + 'a val1 + 'a val0) L"
 type synonym ’a val3210 = "’a val3 + ’a val2 + 'a val1 + 'a val0"
 ```
 
-To marry this with the current the value datatype, we extend it with a generic MapV constructor,
-using a second type parameter `'m`, that is instantiated later.
+To integrate these stratified levels into the core semantics,
+we extend the primary `val` datatype with a generic `MapV` constructor.
+By utilizing a second type parameter, `'m`, we decouple the value definition from the specific map implementation:
+
 ```haskell
 datatype ('a, 'm) val = LitV lit | AbsV (the_absv: 'a) | MapV 'm
 ```
 
-And then we can instantiate it with our semantics of with a fixed amount of levels.
+This allows us to instantiate the semantics with a specific number of levels:
 
 ```haskell
 type synonym ’a val321  = "’a val3 + ’a val2 + ’a val1"
 type synonym ’a valn = "(’a, ’a val321) val"
 ```
 
-Note, we explicitly exclude `'a val0`, as these are primitive values
-and therefore make little sense under `MapV`.
+Notably, `'a val0` is excluded from the MapV constructor,
+as these represent primitive literals and abstract values which are semantically distinct from map-based values.
 
-We are far from done though, as we need to define required functionality
-and make sure, that these definitions fulfill our requirements,
-most prominently our array axioms.
+However, establishing the datatype is only the foundational step;
+we must subsequently define the functional operations and verify that they satisfy the required Boogie array axioms. [TODO ref SMT VC array axioms]
 
 
-#### Type of Val
+#### Type of Values [Proofread]
 
-One important function for values, which will also be relevant for our map semantics [TODO ref to store and wf],
+A critical component of the value semantics, particularly for map operations such as `store` [TODO ref] and well-formedness [TODO ref],
 is the `type_of_val` function.
-As one might guess, it returns the boogie type of boogie values.
-To support boogie maps, we first have to extend the current type definition with a Boogie Map Type:
+This function determines the corresponding Boogie type for any given value within the semantics.
+To support Boogie maps, the existing type definition must be extended to include a map type constructor:
 
 ```haskell
 datatype prim_ty 
@@ -198,36 +203,44 @@ datatype ty
     TMap ty ty (* maps *)
 ```
 
-Note, since we only support single-arity maps [TODO ref to goals],
-it is enough to represent the map as two types, one for the key and one for the value.
-Otherwise, we would need a list of types for the keys.
+As the current implementation is limited to single-arity maps, the `TMap` constructor requires only two arguments:
+the key type and the value type.
+Supporting multi-arity maps would necessitate representing the keys as a list of types,
+but the current dual-type representation is sufficient for our defined goals. [TODO ref goals]
 
+##### Type Ambiguity [Proofread]
 
-The next thing is implementing the case to get the types for maps.
-Here we already run into trouble, since our modelling is too general.
-For example, if we have a map of val1, then this could map
-from bools and ints to bools and ints, and it would not be clear from the outside,
-if it is supposed to be a `[int]int, [bool]bool, [int]bool, [bool]int` or some other map.
+A challenge arises when implementing type extraction for map values.
+Because our functional modeling of maps is so general,
+a single internal Isabelle function could represent multiple distinct Boogie map types.
+For instance, a map of type `val1` might contain a function mapping integers and booleans to integers and booleans,
+making it impossible to distinguish from the outside whether it represents
+a `[int]int`, `[bool]bool`, or `[int]bool` map.
 
-To mitigate this issue, we explicitly store the supposed type of the key and value in the datatype:
+To resolve this ambiguity, we explicitly store the intended key and value types within the map datatype:
 
 ```haskell
 datatype ’k L = FunL "’k ⇒ ’k L + ’k" ty ty
 ```
 
-Of course, there is no semantic connection between the provided types and the function,
-e.g. both `ty` could be `TPrim TBool`, but the function could still map bools to ints.
-This will be resolved later [TODO ref wf].
+While this ensures that every map value carries explicit type information,
+it introduces a potential discrepancy:
+there is no inherent semantic connection between the stored types and the actual behavior of the Isabelle function.
+For example, a value could be tagged as `[bool]bool` while the underlying function operates on integers.
+This consistency requirement is addressed later through the definition of well-formedness invariants. [TODO ref wf]
 
-At least, we are now able to extract the type of the map,
-the defintions can be found in the appendix [TODO ref.]
+##### Accessor Functions for Map Types [Proofread]
 
-Relevant for the next few sections are the function to extract the key and value type from a map type:
+With the inclusion of explicit type tags,
+we can define helper functions to extract the constituent types from a map type.
+These functions are essential for the subsequent implementation of map operations:
 
 ```haskell
 fun key_ty where "key_ty (TMap tk _) = tk" | "key_ty _ = undefined"
 fun val_ty where "val_ty (TMap _ tv) = tv" | "val_ty _ = undefined"
 ```
+
+Detailed definitions for the full `type_of_val` logic are provided in the appendix. [TODO ref]
 
 
 #### Constrained Types [Early Notes]
@@ -306,7 +319,7 @@ inductive wf where
 ```
 
 
-#### Conversion from and to internal datatype
+#### Conversion from and to internal datatype [Early notes]
 [TODO should this just be in the appendix?]
 
 For our map semantics we introduced these different levels. [TODO ref Solution]
@@ -394,5 +407,7 @@ Proofs in Appendix?
 ## Bibliography
 ## List of figures/tables
 ## Agreements
+- of independence
+- AI usage
 
 ## Appendix
