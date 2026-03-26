@@ -2,17 +2,26 @@
 \usepackage[margin=1in]{geometry}
 \usepackage{amsmath,amssymb}
 \usepackage{graphicx}
-\usepackage{hyperref}
+%\usepackage{hyperref}
 \usepackage{enumitem}
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
+
+% Isabelle Packages
+\usepackage{isabelle}
+\usepackage{comment}
+\usepackage{isabellesym}
+\usepackage{isabelletags}
+\usepackage{pdfsetup}
+\usepackage{railsetup}
+
 
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{0.8\baselineskip}
 
 \title{Evolving and Extending Certificate Generation for a Program Verifier}
 \author{Bibin Muttappillil}
-\date{2026 April 16th}
+\date{2026 April 16}
 
 \begin{document}
 
@@ -41,6 +50,8 @@ Supervisors: Yushuo Xiao and Prof.~Dr.~Peter M\"uller
 \subsubsection{CLI change}
 
 \section{Why did we choose Boogie Maps}
+
+
 
 \section{Support Boogie Maps}
 \label{sec:support-boogie-maps}
@@ -240,6 +251,13 @@ To resolve this ambiguity, we explicitly store the intended key and value types 
 datatype 'k L = FunL "'k => 'k L + 'k" ty ty
 \end{verbatim}
 
+\begin{isabellebody}
+\isakeywordONE{datatype}\isamarkupfalse%
+\ {\isacharprime}{\kern0pt}p\ L\ {\isacharequal}{\kern0pt}\ FunL\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}p\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}p\ L\ {\isacharplus}{\kern0pt}\ {\isacharprime}{\kern0pt}p{\isachardoublequoteclose}\ ty\ ty\isanewline
+\isanewline
+\end{isabellebody}
+
+
 While this ensures that every map value carries explicit type information,
 it introduces a potential discrepancy:
 there is no inherent semantic connection between the stored types and the actual behavior of the Isabelle function.
@@ -304,7 +322,7 @@ The reason is discussed in Section~\ref{sec:no-duplicate}.
   \item why does the default value need to be of the correct value?
   \item \texttt{wf} may not recurse in a negative position [TODO citation needed? or just explain?]
   \item so it is hard to cleanly case-distinct on \texttt{wf k}, which is why it is easier to enforce both conditions in the fuzzy zone
-  \item [TODO picture of table showing the fuzzy border]
+  \item .[TODO picture of table showing the fuzzy border]
 \end{itemize}
 
 \subsubsection{Closed [Early Notes]}
