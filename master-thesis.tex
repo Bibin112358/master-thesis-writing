@@ -31,15 +31,78 @@
 Supervisors: Yushuo Xiao and Prof.~Dr.~Peter M\"uller
 \end{center}
 
+\begin{abstract}
+  Lorem Ipsum
+\end{abstract}
 
-\section*{Abstract}
+
 
 \section*{Acknowledgements}
 
 \section{Introduction}
 \subsection{Background}
+\begin{verbatim}
+  - program verification
+  - translationanl verifier
+  - Boogie (Dafny, Viper)
+  - formal guarantee about implementation
+  - desired property: VC => correct
+  - Isabelle? ITP
+\end{verbatim}
+
+\subsubsection{Preceeding work by Parthasarathy}
+We build on the approach by Parthasarathy et al.~\cite{parthasarathy2021formally}.
+
+\paragraph{Overall Approach}
+- validate each run
+
+\paragraph{What is fromally proven?}
+- SMT VC => correct Boogie program in Isabelle
+
+\paragraph{VC Structure}
+\label{sec:vc-structure}
+% TODO cite correctly
+"The generated VC has the following overall structure (represented as a shallow embedding in our certificates):" ~\cite{parthasarathy2021formally}
+
+
+% TODO cite correctly, modified from Gaurav paper
+\[
+\forall
+\underbrace{\textit{VC quantifiers}}_{\substack{
+  \text{type encoding parameters,}\\
+  \text{functions, variable values}}}
+\mathpunct{.}\;
+\Bigl(
+\underbrace{\textit{VC assumptions}}_{\substack{
+  \text{type encoding,}\\
+  \text{fun./var./prog. axioms}}}
+\Longrightarrow
+\textit{WP}
+\Bigr)
+\]
+
+\begin{verbatim}
+  - to get the WP, we need our semantics to fulfill LHS
+\end{verbatim}
+
+
 \subsection{Motivation}
+\label{sec:motivation}
+\begin{verbatim}
+  - full end-to-end: Dafny/Viper -> SMT
+  - needs features outside of supported subset
+  - make Dafny/Viper foundational
+  - more guarantees about Boogie
+\end{verbatim}
+
 \subsection{Contribution}
+\begin{verbatim}
+  - update codebase
+  - statistics?
+  - map semantics some subset
+  - some automatic proofs
+  - tests/evaluation?
+\end{verbatim}
 
 \section{Upgrading Boogie}
 \subsection{State before}
@@ -50,6 +113,7 @@ Supervisors: Yushuo Xiao and Prof.~Dr.~Peter M\"uller
 \subsubsection{CLI change}
 
 \section{Why did we choose Boogie Maps}
+\label{sec:unsupported-usage}
 
 
 
@@ -57,31 +121,275 @@ Supervisors: Yushuo Xiao and Prof.~Dr.~Peter M\"uller
 \label{sec:support-boogie-maps}
 
 \subsection{Semantics of Boogie Maps [Early Notes]}
-[TODO ref Boogie manual]\
-[TODO ref git issue claiming outdated manual]
+\label{sec:semantics-boogie-maps}
+% TODO move to introduction?
 
-\subsubsection{Select [Early Notes]}
-The primary operation for Boogie maps is the selection of a value associated with a specific key.
-While similar operations in other contexts are referred to as application (lambda calculus), lookup (Java), or reading (array axioms), [TODO ref to all three?]
-we adhere to the term \emph{select} to maintain consistency with the Boogie language specification.
+Let's first see how maps can be used in Boogie.
 
-[TODO explain Boogie select semantics informally according to the outdated manual]
+\begin{verbatim}
+procedure simple ()
+{
+    var y: int;
+    var a: [int] int;
+    var b: [int] int;
+    
+    y := a[0];       // select
+    a := a[2 := 1];  // store and return a new map
+    a[2] := 1;       // convinient syntax for the above
+
+    // lambda expression
+    a := (lambda x: int :: if x > 0 then y + x + x else y + x);
+    b := (lambda x: int :: if x < 0 then y + x     else y + x + x);
+  
+    assert a == b;
+}
+
+\end{verbatim}
+
+
+
+
+% TODO // adapted from https://ethz.ch/content/dam/ethz/special-interest/infk/chair-program-method/pm/documents/Education/Courses/SS2017/Program%20Verification/08-Boogie.pdf
+
+With the syntax \texttt{var m:[K] V}, we can declare a map
+with key type \texttt{K} and value type \texttt{V}.
+Using a map, we can select a value at a given key
+and obtain an updated map by storing a new value at a corresponding key.
+
+Interestingly, lambda expressions can be treated as maps.
+Thus, a map behaves like a function that can be treated as a value and updated.
+Importantly, it is \textbf{not} like a dictionary or an association list,
+as those are usually finite mappings.
+
+There are more complex map types.
+They can have multiple keys, which we then call multi-arity maps.
+This source [TODO ref] claims that they are discouraged though.
+The key and value types can themselves be map types,
+thus enabling nested map types.
+
+\begin{verbatim}
+procedure complex ()
+{
+    var y: int;
+    var a: [int] int;
+    var d: [ [int]int, int ] int;   // multi-arity
+    var c: [ [int]int ] [int] int;  // curried
+    
+    c[a][y] := y;
+    d[a, y] := y;
+}
+\end{verbatim}
+
+
+Maps can also be polymorphic, i.e. have a type parameter:
+% TODO discourages in future? TODO ref?
+
+\begin{verbatim}  
+procedure poly ()
+{
+    var p: <S>[S]S;
+    p[0] := 1;
+    p[true] := false;
+    p[p] := p; 
+    // impredicative polymorphism, recursive types
+}
+\end{verbatim}
+
+As one might imagine, this is a powerful feature.
+For simplicity, we decided to not support this feature
+as can be seen in our goals. \ref{sec:goals-to-support}
+
+% [TODO ref Boogie manual]\
+% [TODO ref git issue claiming outdated manual]
+
+\subsection{Type Encoding \& Extesionality}
+% TODO move to introduction too?
+% TODO // extensionality: works only with monomorphic typeencoding & SMT-Arrays
+\begin{verbatim}
+  - Boogie has different type encodings: polymorphic, monomorphic and argument [TODO ref]
+  - default changed from polymorphic to monomorphic [TODO ref]
+  - Proofgen is implemented on polymorphic
+  - to use polymorphic: use \texttt{typeencoding:p} flag and include a polymorphic function [TODO example]
+  - typeencoding have a huge affect on vc axioms for maps
+  - semantics claims not extensional, but it is using monomorphic, and using SMT-Arrays (default)
+\end{verbatim}
+
+% \subsubsection{Select [Early Notes]}
+% The primary operation for Boogie maps is the selection of a value associated with a specific key.
+% While similar operations in other contexts are referred to as application (lambda calculus), lookup (Java), or reading (array axioms), [TODO ref to all three?]
+% we adhere to the term \emph{select} to maintain consistency with the Boogie language specification.
+
+% [TODO explain Boogie select semantics informally according to the outdated manual]
 
 \subsection{Goals to Support}
 \label{sec:goals-to-support}
-\subsubsection*{Want}
-\begin{itemize}[leftmargin=1.5em]
-  \item parameterized
-\end{itemize}
 
-\subsubsection*{Ok Limitations}
-\begin{itemize}[leftmargin=1.5em]
-  \item polymorphic
-  \item arbitrary nesting levels
-\end{itemize}
+% The main Boogie features not supported by our subset are maps and other primitive types such as bitvectors. Boogie maps are polymorphic and impredicative, i.e. one can define maps that contain themselves in their domain. Giving a semantic model for such maps in a proof assistant such as Isabelle or Coq is non-trivial; we aim to tackle this issue in the future. Modelling bitvectors will be simpler, although maintaining full automation may require some additional work.
+% TODO cite? Gaurav 3.1 The Boogie Language
 
-\subsection{SMT VC axioms}
-\label{sec:smt-vc-axioms}
+% Supporting Boogie’s potentially-impredicative maps is the main open challenge: maps can take other maps as input, potentially including themselves. The challenge with this feature is to still be able to express a type in Isabelle capturing all Boogie values despite the potentially-cyclic nature of map types. In practice, however, this may not be required in full generality: we have observed that Boogie front-ends rarely use maps that contain maps of the same type as input. Therefore, we plan to extend our technique to support a suitably-expressive restricted form of Boogie maps.
+% TODO cite? Gaurav 9 Conclusion
+
+Supporting maps in its full semantics would be too difficult,
+at least for the first step. % TODO cite Gaurav?
+That is why we want to support a useful subset of the map semantics
+and limit the cases of map usages we support.
+The main motivation, as stated in \ref{sec:motivation},
+is to support proof generations of Boogie files generated by Dafny.
+That is why we focused on analyzing t Boogie files generated by Dafny,
+and seeing in which ways Boogie maps are used, and not used.
+
+\paragraph{Limitations.}
+We will not focus on \textbf{polymorphic} maps.
+This would make it more difficult, as generics and polymorphism are a hard topic, % TODO ref
+and introduces challenges like \emph{impredicative} maps. % TODO ref Gaurav?
+Also, Dafny removed its dependence on polymorphic maps % TODO ref,
+so it does not use this feature.
+
+Another challenge is, that maps can take other maps as inputs,
+which we lay out in \ref{sec:cantor} we this is challenging.
+Unfortunately, Dafny has a case, where it uses keys and values as maps.
+The good thing, it seems that it only uses one level of nesting on the keys,
+so it is fine if we only support two levels of nesting of maps on the map keys.
+
+Another limitation, that we allow,
+is that the semantics might be program dependent.
+Meaning, that there might not be a full formal semantic definition for all programs,
+but that parts of the semantics, might depend on the input program.
+One example is that the semantics might need to explicitly instantiate
+the amount of nesting levels in maps, that we might extract from a given Boogie program.
+For example, \texttt{[int]int} might use a semantics with nesting level of 1,
+whereas a program using \texttt{[[int]int]int} might use a semantics with nesting level 2.
+
+One practical limitations we use, is that we only support single-arity maps.
+As described in \ref{sec:semantics-boogie-maps} Boogie maps can take multiple keys,
+although that is discouraged. % TODO ref to manual claiming that
+Multi-arity maps can easily be trandformed to single-arity maps,
+by currying, so that should not be too much of a fundamental limitation.
+Some initial solutions relied on this assumption,
+but we suspect, that the final solution could actually be expanded
+to support multi-arity maps. % TODO ref to future/work, supporting multi-arity maps
+
+
+\paragraph{Necessary Features.}
+To fulfill our goal to eventually support Dafny verification,
+we need to support \emph{two levels of nesting} of key types for maps.
+Also, we want that the nesting levels can be \emph{extended}, or even automatically adjusted,
+for future work.
+That means, we should not hard-code the amount of nesting levels too much in the semantics.
+As the current proofgen is built on the polymorphic typeencoding of Boogie,
+our map semantic needs to fulfill the \emph{map axioms} of the VC generated by Boogie.
+Lastly, we want out maps to be extensional.
+% TODO what is extensional?
+
+\subsubsection{Why we want extensionality of maps}
+
+One way wonder, if extensionality is really necessary?
+Even the official Boogie manual does not guarantee it % TODO ref
+and there is no axiom in the VC that enforces this.
+
+We still argue that this is important, illustrated by the following example:
+
+\begin{verbatim}
+  var a: [int]int;
+  var b: [int]int;
+  var m: [[int]int]int;
+
+  a := (lambda x:int :: x+1);
+  a[42] := 42;
+  b := (lambda x:int :: if x == 42 then 42 else x+1);
+
+  // assert a == b;  // true if extensional
+  m[a] := 1;
+  m[b] := 2;
+  assert m[a] == 1;  // should never be proven?
+  assert m[a] == 2;  // true if extensional
+\end{verbatim}
+
+\begin{verbatim}
+  - consistency with other type encodings
+  - undesired behaviour, specifying something that is not defined?
+\end{verbatim}
+
+
+\subsection{VC axioms changes}
+\label{sec:vc-axioms-changes}
+
+\ref{sec:vc-structure}
+
+\begin{verbatim}
+  - maps significantly change the VC
+  - especially polymorphic type encoding
+  - map axioms
+\end{verbatim}
+
+\[
+\forall
+\underbrace{\textit{VC quantifiers}}_{\substack{
+  \text{type encoding parameters,}\\
+  \text{functions, variable values}\\
+  \textbf{map types \& functions}}}
+\mathpunct{.}\;
+\Bigl(
+\underbrace{\textit{VC assumptions}}_{\substack{
+  \text{type encoding,}\\
+  \text{fun./var./prog. axioms}\\
+  \textbf{map axioms}}}
+\Longrightarrow
+\textit{WP}
+\Bigr)
+\]
+
+
+\begin{verbatim}
+- implication, need to fulfill LHS to use conclusion (WP)
+- the LHS also newly contains map axioms, we need to fulfill
+- this also gives us formal goals our map semantics need to fulfill
+\end{verbatim}
+
+\begin{verbatim}
+[TODO have SMT map axiom example in appendix, and just list simplified version here?]
+
+need
+- values
+- types
+- type: value => types
+- MapType0Store (v, v, v) => v
+- MapType0Select (v, v) => v
+- MapType0Type (t, t) => t
+- MapType0TypeInv0 t => t
+- MapType0TypeInv1 t => t
+
+axioms
+- (MapType0TypeInv0 (MapType0Type
+- (MapType0TypeInv1 (MapType0Type
+- some weird type invariant? (irrelevant? skip?)
+- store does not change type?
+- Ax1: update
+- Ax2: stable
+- useless stable axiom? (skip?)
+
+
+
+(forall ((arg0@@4 T@U) (arg1@@2 T@U) ) ((let ((aVar1 (MapType0TypeInv1 (type arg0@@4))))
+(let ((aVar0 (type arg1@@2)))
+ (=> (and (= (type arg0@@4) (MapType0Type aVar0 aVar1)) (= (type arg1@@2) aVar0)) (= (type (MapType0Select arg0@@4 arg1@@2)) aVar1))))))
+
+(forall ((arg0@@5 T@U) (arg1@@3 T@U) (arg2 T@U) ) ((let ((aVar1@@0 (type arg2)))
+(let ((aVar0@@0 (type arg1@@3)))
+ (=> (and (and (= (type arg0@@5) (MapType0Type aVar0@@0 aVar1@@0)) (= (type arg1@@3) aVar0@@0)) (= (type arg2) aVar1@@0)) (= (type (MapType0Store arg0@@5 arg1@@3 arg2)) (MapType0Type aVar0@@0 aVar1@@0)))))))
+
+
+
+\end{verbatim}
+
+
+\subsection{Our VC antecedant change}
+\label{sec:our-vc-change}
+
+\begin{verbatim}
+  - weaker map update axiom
+\end{verbatim}
 
 \subsection{Where to start [Proofread]}
 \label{sec:where-to-start}
@@ -107,6 +415,8 @@ datatype 'a val = LitV lit | AbsV (the_absv: 'a) | MapV ?
 The question now is, what should we put in place of \texttt{?}?
 
 \subsection{Design Challenges: Cantor's Theorem [Proofread]}
+\label{sec:cantor}
+
 A naive approach to representing map values would involve a direct recursive definition:
 
 \begin{verbatim}
@@ -154,9 +464,10 @@ This allows the model to support maps where the keys or values are themselves ma
 For instance, representing types such as \texttt{[int][[int]int]int} or \texttt{[[[int]int]int]int}.
 
 \subsubsection{Program dependent semantics [Early Draft]}
+
 \begin{itemize}[leftmargin=1.5em]
-  \item [TODO currently fixed at 3 levels]
-  \item [TODO explain program dependent semantics or just limitation]
+  \item .[TODO currently fixed at 3 levels]
+  \item .[TODO explain program dependent semantics or just limitation]
 \end{itemize}
 
 A notable characteristic of this approach is that the value semantics are program-dependent.
@@ -434,6 +745,8 @@ Proofs in Appendix?
 \section{Conclusion/Summary}
 
 \section*{Bibliography}
+\bibliographystyle{plain}
+\bibliography{references}
 \section*{List of figures/tables}
 \section*{Agreements}
 \subsection*{of independence}
