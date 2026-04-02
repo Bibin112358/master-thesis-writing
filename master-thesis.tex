@@ -347,6 +347,12 @@ we will be focusing on its encoding of the maps.
 
 
 \subsubsection{VC Map Axioms}
+\label{sec:vc-map-axioms}
+
+\newcommand{\opApp}[1]{\operatorname{#1}}
+\newcommand{\opAppI}[2]{\operatorname{#1} \ {#2}}
+\newcommand{\opAppII}[3]{\operatorname{#1} \ {#2} \ {#3}}
+\newcommand{\opAppIII}[4]{\operatorname{#1} \ {#2} \ {#3} \ {#4}}
 
 Here are the map relevant parts of the VC:
 
@@ -375,11 +381,14 @@ These functions need to fulfill the following axioms: \footnote{simplified for c
 These guarantee that $MapType0TypeInv0$ and $MapType0TypeInv1$ are actually
 inverse functions of the map type constructor $MapType0Type$.
 
-\begin{align*}
-  \forall \ m \ k. \ 
-  type \ m = MapType0Type \ (type \ k) \ (MapType0TypeInv1 \ (type \ m)) \\
-  \implies  type \ (MapType0Select \ m \ k) = MapType0TypeInv1 \ (type \ m)
-\end{align*}
+\begin{equation}
+  \label{ax:map-select-typesafe}
+  \begin{aligned}
+    \forall \ m \ k. \ 
+    type \ m = MapType0Type \ (type \ k) \ (MapType0TypeInv1 \ (type \ m)) \\
+    \implies  type \ (MapType0Select \ m \ k) = MapType0TypeInv1 \ (type \ m)
+  \end{aligned}
+\end{equation}
 
 % TODO shorter explanantion?
 This says, that if we have a value $k$ of type $K = type \ k$
@@ -420,18 +429,18 @@ This shows, that updating at a position works.
 \begin{align*}
   &\forall \ m \ x \ y \ v.\\
   &x = y \ \vee \\
-  &\MapTypeSelect {(\MapTypeStore m x v)} y = \MapTypeSelect m y
+  &\opAppII{MapType0Select}{(\opAppIII{MapType0Store}{m}{x}{v})}{y} = \opAppII{MapType0Select}{m}{y}
 \end{align*}
 
 This shows, that the store at a position, does not affect the other positions.
 
 
-\subsection{Our VC antecedant change}
+\subsubsection{Our VC antecedant change}
 \label{sec:our-vc-change}
 
 The current axiom, talking about the map update \ref{ax:map-update-strong},
 is too strong for our semantics,
-that relies on our stratification solution leater \ref{sec:stratification-solution}
+that relies on our stratification solution, explained leater in section \ref{sec:stratification-solution}.
 The main problem is, that this axiom has to hold for every value $m$,
 even is it is not a map, and every value $k$,
 even if its type does not match the key type of $m$.
@@ -451,7 +460,7 @@ With $\type m = \MapType {(\type k)} {(\type v)}$ we guarantee,
 that $m$ is a map, and that the store is applied with the corresponding types.
 
 
-\subsection{Where to start [Proofread]}
+\subsection{Where to start}
 \label{sec:where-to-start}
 In the Boogie semantics, maps are treated as first-class values.
 Consequently, the initial step in supporting them involves extending the existing value datatype.
@@ -460,8 +469,8 @@ The current definition for literals and values is as follows:
 \begin{verbatim}
 datatype lit =  LBool bool  | LInt int | LReal real
 
-(* The values (and as a result the semantics) are parametrized by the carrier type 'a for the
-abstract values (values that have a type constructed via type constructors) *)
+(* The values (and as a result the semantics) are parametrized by the carrier type 'a
+for the abstract values (values that have a type constructed via type constructors) *)
 
 datatype 'a val = LitV lit | AbsV (the_absv: 'a)
 \end{verbatim}
@@ -474,7 +483,7 @@ datatype 'a val = LitV lit | AbsV (the_absv: 'a) | MapV ?
 
 The question now is, what should we put in place of \texttt{?}?
 
-\subsection{Design Challenges: Cantor's Theorem [Proofread]}
+\subsection{Design Challenges: Cantor's Theorem}
 \label{sec:cantor}
 
 A naive approach to representing map values would involve a direct recursive definition:
@@ -493,7 +502,7 @@ it would lead to a logical inconsistency.
 Notably, the issue arises specifically from the recursive occurrence of \texttt{'a val} in the domain (the left-hand side) of the function.
 While a constructor like \texttt{bool => 'a val} is permissible, \texttt{'a val => bool} is not.
 
-\subsection{The Stratification Solution [Proofread]}
+\subsection{The Stratification Solution}
 \label{sec:stratification-solution}
 To resolve the conflict between recursion and cardinality, we propose an ``explicit unrolling'' of the recursion on the domain.
 This creates a hierarchy of values:
@@ -505,37 +514,35 @@ This creates a hierarchy of values:
   \item Level $n$: Maps where keys are of Level $\le n-1$ and return values are of Level $\le n$.
 \end{itemize}
 
-[TODO visualization similar to this:]
-\begin{figure}[h]
-  \centering
-  \IfFileExists{map-viz.png}{%
-    \includegraphics[width=0.75\linewidth]{map-viz.png}%
-  }{%
-    \fbox{\parbox[c][4cm][c]{0.75\linewidth}{\centering map-viz.png placeholder}}
-  }
-  \caption{Stratified map-value hierarchy (placeholder).}
-\end{figure}
+% [TODO visualization similar to this:]
+% \begin{figure}[h]
+%   \centering
+%   \IfFileExists{map-viz.png}{%
+%     \includegraphics[width=0.75\linewidth]{map-viz.png}%
+%   }{%
+%     \fbox{\parbox[c][4cm][c]{0.75\linewidth}{\centering map-viz.png placeholder}}
+%   }
+%   \caption{Stratified map-value hierarchy (placeholder).}
+% \end{figure}
 
 This approach requires the user to specify the required nesting depth when defining the semantics.
 
 To ensure the semantics can represent complex, nested Boogie map types,
 it is essential that each level $n$ is cumulative, incorporating all preceding levels.
 This allows the model to support maps where the keys or values are themselves maps of a lower level.
-For instance, representing types such as \texttt{[int][[int]int]int} or \texttt{[[[int]int]int]int}.
+For instance, representing types such as
+\texttt{[int][[int]int]int} (a map of level 2, with keys of level 0, returning values of level 2) or \texttt{[[[int]int]int]int} (a map of level 3, with keys of level 2, returning values of level 0).
 
-\subsubsection{Program dependent semantics [Early Draft]}
-
-\begin{itemize}[leftmargin=1.5em]
-  \item .[TODO currently fixed at 3 levels]
-  \item .[TODO explain program dependent semantics or just limitation]
-\end{itemize}
+\subsubsection{Program dependent semantics}
 
 A notable characteristic of this approach is that the value semantics are program-dependent.
 Currently, the implementation is fixed at three levels of nesting.
 While this serves as a practical limitation for the current prototype,
 it is theoretically extensible to any finite depth required by a target Boogie program.
+This depth has to be determined, such that we are able to define the types and functions of the map semantics properly.
+That means depending on the input program, we get a different semantics.
 
-\subsubsection{Datatype Construction [Proofread]}
+\subsubsection{Datatype Construction}
 \label{sec:datatype-construction}
 The stratified hierarchy could be implemented by defining discrete datatypes for each level:
 
@@ -543,7 +550,8 @@ The stratified hierarchy could be implemented by defining discrete datatypes for
 datatype 'a val0 = LitV0 lit | AbsV0 (the_absv: 'a)
 datatype 'a val1 = MapV1 "'a val0 => ('a val1 + 'a val0)"
 datatype 'a val2 = MapV2 "('a val1 + 'a val0) => ('a val2 + 'a val1 + 'a val0)"
-datatype 'a val3 = MapV3 "('a val2 + 'a val1 + 'a val0) => ('a val3 + 'a val2 + 'a val1 + 'a val0)"
+datatype 'a val3 = MapV3 "('a val2 + 'a val1 + 'a val0)
+  => ('a val3 + 'a val2 + 'a val1 + 'a val0)"
 \end{verbatim}
 
 To minimize redundancy and improve maintainability, we introduce a helper datatype, \texttt{'k L},
@@ -551,14 +559,17 @@ which represents a functional map layer.
 We then construct the hierarchy using type synonyms:
 
 \begin{verbatim}
-(* TODO explain L *)
+(* A helper datatype, that takes a domain as a type parameter
+   and gives a function from the domain to the domain and itself *)
 datatype 'k L = FunL "'k => 'k L + 'k"
 
+(* A datatype representing just primitive values *)
 datatype 'a val0 = LitV0 lit | AbsV0 (the_absv: 'a)
+
+(* Instantiate different map levels *)
 type synonym 'a val1 = "'a val0 L"
 type_synonym 'a val2 = "('a val1 + 'a val0) L"
 type_synonym 'a val3 = "('a val2 + 'a val1 + 'a val0) L"
-type synonym 'a val3210 = "'a val3 + 'a val2 + 'a val1 + 'a val0"
 \end{verbatim}
 
 To integrate these stratified levels into the core semantics,
@@ -572,6 +583,7 @@ datatype ('a, 'm) val = LitV lit | AbsV (the_absv: 'a) | MapV 'm
 This allows us to instantiate the semantics with a specific number of levels:
 
 \begin{verbatim}
+(* Instantiate values with three map levels *)
 type synonym 'a val321  = "'a val3 + 'a val2 + 'a val1"
 type synonym 'a valn = "('a, 'a val321) val"
 \end{verbatim}
@@ -581,9 +593,9 @@ as these represent primitive literals and abstract values which are semantically
 
 However, establishing the datatype is only the foundational step;
 we must subsequently define the functional operations and verify that they satisfy the required Boogie array axioms.
-See Section~\ref{sec:smt-vc-axioms}.
+See Section~\ref{sec:vc-map-axioms}.
 
-\subsubsection{Type of Values [Proofread]}
+\subsubsection{Type of Values}
 \label{sec:type-of-values}
 A critical component of the value semantics, particularly for map operations such as \texttt{store} (Section~\ref{sec:store}) and well-formedness (Section~\ref{sec:wf-definition}),
 is the \texttt{type\_of\_val} function.
@@ -603,12 +615,13 @@ datatype ty
     TMap ty ty (* maps *)
 \end{verbatim}
 
-As the current implementation is limited to single-arity maps, the \texttt{TMap} constructor requires only two arguments:
+As the current implementation is limited to single-arity maps
+\ref{sec:goals-to-support}, the \texttt{TMap} constructor requires only two arguments:
 the key type and the value type.
 Supporting multi-arity maps would necessitate representing the keys as a list of types,
 but the current dual-type representation is sufficient for our defined goals (Section~\ref{sec:goals-to-support}).
 
-\paragraph{Type Ambiguity [Proofread]}
+\paragraph{Type Ambiguity}
 A challenge arises when implementing type extraction for map values.
 Because our functional modeling of maps is so general,
 a single internal Isabelle function could represent multiple distinct Boogie map types.
@@ -617,10 +630,6 @@ making it impossible to distinguish from the outside whether it represents
 a \texttt{[int]int}, \texttt{[bool]bool}, or \texttt{[int]bool} map.
 
 To resolve this ambiguity, we explicitly store the intended key and value types within the map datatype:
-
-\begin{verbatim}
-datatype 'k L = FunL "'k => 'k L + 'k" ty ty
-\end{verbatim}
 
 \begin{isabellebody}
 \isakeywordONE{datatype}\isamarkupfalse%
@@ -635,7 +644,7 @@ there is no inherent semantic connection between the stored types and the actual
 For example, a value could be tagged as \texttt{[bool]bool} while the underlying function operates on integers.
 This consistency requirement is addressed later through the definition of well-formedness invariants (Section~\ref{sec:wf-definition}).
 
-\paragraph{Accessor Functions for Map Types [Proofread]}
+\paragraph{Accessor Functions for Map Types}
 With the inclusion of explicit type tags,
 we can define helper functions to extract the constituent types from a map type.
 These functions are essential for the subsequent implementation of map operations:
@@ -647,30 +656,86 @@ fun val_ty where "val_ty (TMap _ tv) = tv" | "val_ty _ = undefined"
 
 Detailed definitions for the full \texttt{type\_of\_val} logic are provided in Appendix~\ref{sec:appendix}.
 
-\subsubsection{Constrained Types [Early Notes]}
-\label{sec:constrained-types}
-\begin{itemize}[leftmargin=1.5em]
-  \item current definition too general
-  \item will need some additional invariants that the map values need to fulfill
-  \item with these invariants, we can create a constrained type using \texttt{typedef} and lifting (Section~\ref{sec:typedef-lifting})
-\end{itemize}
+These function will also play a crucial part in fulfilling the VC map axioms \ref{sec:vc-map-axioms},
+especially regarding $\opApp{MapType}, \opApp{MapType0TypeInv0}, \opApp{MapType0TypeInv1}$.
 
-\subsubsection{Type Safety [Early Draft]}
-\label{sec:type-safety}
-From the SMT VC axioms (Section~\ref{sec:smt-vc-axioms}), we need the property
-that if we select from a map using a key of the key type of the map,
-then the result is of the value type of the map:
+
+\subsubsection{Constrained Types}
+\label{sec:constrained-types}
+
+The current datatype definition is too permissive,
+and does not fulfill our required map axioms from \ref{sec:vc-map-axioms}.
+We will need to restrict them, with some additional well-formedness properties, $\opApp{wf}$,
+that the datatype needs to fulfill.
+Using these properties, we are able to create a new 'constrained' type,
+using using \texttt{typedef} in Isabelle. % TODO ref
 
 \begin{verbatim}
-(ALL k. type_of_val k = key_ty (type_of_val m) --> type_of_val (selectImpl m k) = val_ty (type_of_val m))
+definition wf_map_set :: "'a val321 set" where
+"wf_map_set = {m. wf (MapV m)}"
+
+typedef (overloaded) 'a wf_maps = "wf_map_set :: 'a val321 set"
+proof
+  (* showing some witness, such that wf_maps is not empty *)
+qed
+
+type_synonym 'a wf_val = "('a, 'a wf_maps) val"
 \end{verbatim}
 
-(assuming we have \texttt{selectImpl}, which is introduced in Section~\ref{sec:select}).
+The question remains, how to define \texttt{wf}.
 
-This property does not hold for our current \texttt{valn} definition,
-as it just maps from values to values, regardless of their type.
+\subsubsection{Closed}
+\label{sec:closed}
 
-[TODO mention why it is hard to do that structurally using datatypes only?]
+If we have a constrained type, and use operations like select/store,
+the result should be constrained again, i.e. fulfill our desired properties.
+Thus, one desired property is \texttt{(ALL k. wf k --> wf (selectImpl m k))}.
+\footnote{Assuming we have a suitable definition of \texttt{selectImpl}, which will be introduced in Section~\ref{sec:select}}
+
+We can see that that the definition of \texttt{wf} is dependent on \texttt{wf} of other values.
+For a recursive definition, we would need to guarantee termination,
+e.g. applying \texttt{wf} only on 'smaller' cases.
+This is not that easy in this case, as \texttt{selectImpl m k} might be any other value.
+Fortunately there are \texttt{inductive} definitions in Isabelle/HOL %TODO ref,
+allowing us to define \texttt{wf} values based on previously determined \texttt{wf} values.
+
+The recursive \texttt{wf} call is not allowed in negative position, which is a problem, since:
+\texttt{(ALL k. wf k --> wf (selectImpl m k))} is \texttt{(ALL k. ¬ wf k OR wf (selectImpl m k))}.
+This also makes intuitively sense, since we are only able to show that values are \texttt{wf},
+but not that there are \texttt{¬wf}.
+So our solution is to make the property stronger, by dropping the antecedant:
+\texttt{(ALL k. wf (selectImpl m k))},
+enforcing that the result is always \texttt{wf}, no matter if the key is or not.
+
+For store we do not need an additional property, as we can derive the property:
+\texttt{(ALL k v. wf m AND wf k AND wf v --> wf (storeImpl m k v))}.
+
+This leads to our work-in-progress definition of:
+
+\begin{isabellebody}
+\isakeywordONE{inductive}\isamarkupfalse%
+\ wf\ \isakeywordTWO{where}\isanewline
+\ \ \ \ wfLitV{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}wf\ {\isacharparenleft}{\kern0pt}LitV\ v{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\ {\isacharbar}{\kern0pt}\ wfAbsV{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}wf\ {\isacharparenleft}{\kern0pt}AbsV\ v{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\ {\isacharbar}{\kern0pt}\isanewline
+\ \ \ \ wfMapV{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isasymlbrakk}\ {\isacharparenleft}{\kern0pt}{\isasymforall}k{\isachardot}{\kern0pt}\ wf\ {\isacharparenleft}{\kern0pt}selectImpl\ m\ k{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}
+{\isasymrbrakk}\ {\isasymLongrightarrow}\ wf\ m{\isachardoublequoteclose}
+\end{isabellebody}
+
+Where we have a base-case, saying that the primitive values are well-formed,
+and a map case, where we can have our additional properties as the antecedants for implying \texttt{wf}.
+
+\subsubsection{Type Safety}
+\label{sec:type-safety}
+From the VC map axiom~\ref{ax:map-select-typesafe},
+we need the property that if we select from a map using a key of the key type of the map,
+then the result is of the value type of the map.
+So in Isabelle we want something like this:
+
+\begin{verbatim}
+(ALL k. wf k AND type_of_val k = key_ty (type_of_val m)
+--> type_of_val (selectImpl m k) = val_ty (type_of_val m))
+\end{verbatim}
+
+%[TODO mention why it is hard to do that structurally using datatypes only?]
 
 We will actually enforce a stronger condition:
 
@@ -678,53 +743,118 @@ We will actually enforce a stronger condition:
 (ALL k. type_of_val (selectImpl m k) = val_ty (type_of_val m))
 \end{verbatim}
 
-The reason is discussed in Section~\ref{sec:no-duplicate}.
+One reason is, again, that \texttt{wf} may not appear in a negative position
+(in this case, on the left hand side of an implication).
+Then it will be a derived property, after removing \texttt{wf}
+and in combination with the other properties.
+We think, it is more convenient to enforce this explicitly,
+such that we can have a stronger guarantee,
+for cases where we need to build nested map and prove its well-formedness.
 
-\subsubsection{No Duplicate representation [Early Notes]}
+We extend our definition of \texttt{wf} accordingly:
+\begin{isabellebody}
+\isakeywordONE{inductive}\isamarkupfalse%
+\ wf\ \isakeywordTWO{where}\isanewline
+\ \ \ \ wfLitV{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}wf\ {\isacharparenleft}{\kern0pt}LitV\ v{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\ {\isacharbar}{\kern0pt}\ wfAbsV{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}wf\ {\isacharparenleft}{\kern0pt}AbsV\ v{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\ {\isacharbar}{\kern0pt}\isanewline
+\ \ \ \ wfMapV{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isasymlbrakk}\ 
+{\isacharparenleft}{\kern0pt}{\isasymforall}k{\isachardot}{\kern0pt}\ wf\ {\isacharparenleft}{\kern0pt}selectImpl\ m\ k{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharsemicolon}{\kern0pt}\isanewline
+\ \ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isasymforall}k{\isachardot}{\kern0pt}\ type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ {\isacharparenleft}{\kern0pt}selectImpl\ m\ k{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ val{\isacharunderscore}{\kern0pt}ty\ {\isacharparenleft}{\kern0pt}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ m{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ \ \ {\isasymrbrakk}\ {\isasymLongrightarrow}\ wf\ m{\isachardoublequoteclose}\isanewline
+\end{isabellebody}
+
+\subsubsection{No Duplicate representation}
 \label{sec:no-duplicate}
-\begin{itemize}[leftmargin=1.5em]
-  \item we want a unique Isabelle representation for each Boogie map
-  \item why? otherwise equality might not behave as we would expect
-  \item currently two problems
-  \item problem 1: a high-level map could model a low-level map
-  \item solution 1: \texttt{wf\_ty}, which might be implied by type safety (Section~\ref{sec:type-safety}) but is easier to list explicitly
-  \item problem 2: the function representation might differ outside the relevant domain
-  \item solution 2: force default value in these cases
-  \item why does the default value need to be of the correct value?
-  \item \texttt{wf} may not recurse in a negative position [TODO citation needed? or just explain?]
-  \item so it is hard to cleanly case-distinct on \texttt{wf k}, which is why it is easier to enforce both conditions in the fuzzy zone
-  \item .[TODO picture of table showing the fuzzy border]
-\end{itemize}
 
-\subsubsection{Closed [Early Notes]}
-\label{sec:closed}
-\begin{itemize}[leftmargin=1.5em]
-  \item if we have constrained type, and use operations like select/store, the result should be constrained again, i.e. fulfill the invariant
-  \item so we need select to be closed
-  \item not true in general, as the result might be a bad map, [TODO example?]
-  \item desired property: \texttt{(ALL k. wf k --> wf (selectImpl m k))}
-  \item not possible, as \texttt{wf k} appears in negative position
-  \item could make stronger by replacing with \texttt{wf\_ty k}
-  \item or just \texttt{(ALL k. wf (selectImpl m k))}, enforcing that the result is always \texttt{wf}, no matter if the key is or not
-  \item the closedness of store is a derived property now
-\end{itemize}
+As discussed in Section~\ref{sec:goals-to-support},
+we want our maps to be extensional.
+More concretely, this means, that we want there to be a unique Isabelle representation for each Boogie map.
+This means, that if two maps values agree for each key,
+then they should be represented by the same Isabelle representation.
+The current definition has two problems fulfilling this property.
 
-\subsubsection{Well Formed Definition [Early Notes]}
+\paragraph{Problem 1: Low-level map as high level value}
+Let's say we have a \texttt{[int]int} map in Boogie.
+We want to cononically represent this in Isabelle as a value of level 1, i.e. \texttt{'a val1}.
+Unfortunately, there is nothing stopping us from representing it as a map on level 3, i.e. \texttt{'a val3},
+as it has \texttt{'a val0} in its domain and codomain.
+Therefore, we have different ways to represent the same thing.
+
+\paragraph{Solution: Type Hierarchies}
+To avoid this we make sure that the map types on level $n$,
+need to either have their domain on level $n-1$ or their codomain on level $n$.
+
+% tmap_lvl, wf_L, wf_ty
+\begin{isabellebody}
+\isakeywordONE{fun}\isamarkupfalse%
+\ tmap{\isacharunderscore}{\kern0pt}lvl\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}ty\ {\isasymRightarrow}\ nat{\isachardoublequoteclose}\ \isakeywordTWO{where}\isanewline
+\ \ \ \ {\isachardoublequoteopen}tmap{\isacharunderscore}{\kern0pt}lvl\ {\isacharparenleft}{\kern0pt}TMap\ tk\ tv{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ max\ {\isacharparenleft}{\kern0pt}{\isadigit{1}}\ {\isacharplus}{\kern0pt}\ tmap{\isacharunderscore}{\kern0pt}lvl\ tk{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}tmap{\isacharunderscore}{\kern0pt}lvl\ tv{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}tmap{\isacharunderscore}{\kern0pt}lvl\ {\isacharunderscore}{\kern0pt}\ {\isacharequal}{\kern0pt}\ {\isadigit{0}}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isakeywordONE{primrec}\isamarkupfalse%
+\ wf{\isacharunderscore}{\kern0pt}L\ \isakeywordTWO{where}\isanewline
+\ \ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}L\ n\ {\isacharparenleft}{\kern0pt}FunL\ {\isacharunderscore}{\kern0pt}\ tk\ tv{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ {\isacharparenleft}{\kern0pt}\isanewline
+\ \ \ \ {\isacharparenleft}{\kern0pt}tmap{\isacharunderscore}{\kern0pt}lvl\ tk\ {\isasymle}\ n{\isacharminus}{\kern0pt}{\isadigit{1}}{\isacharparenright}{\kern0pt}\ {\isasymand}\ {\isacharparenleft}{\kern0pt}tmap{\isacharunderscore}{\kern0pt}lvl\ tv\ {\isasymle}\ n{\isacharparenright}{\kern0pt}\ {\isasymand}\isanewline
+\ \ \ \ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}tmap{\isacharunderscore}{\kern0pt}lvl\ tk\ {\isacharequal}{\kern0pt}\ n{\isacharminus}{\kern0pt}{\isadigit{1}}{\isacharparenright}{\kern0pt}\ {\isasymor}\ {\isacharparenleft}{\kern0pt}tmap{\isacharunderscore}{\kern0pt}lvl\ tv\ {\isacharequal}{\kern0pt}\ n{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\ \ \isanewline
+\isanewline
+\isakeywordONE{fun}\isamarkupfalse%
+\ wf{\isacharunderscore}{\kern0pt}ty\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ valn\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ \isakeywordTWO{where}\isanewline
+\ \ \ \ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}ty\ {\isacharparenleft}{\kern0pt}LitV\ v{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ True{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}ty\ {\isacharparenleft}{\kern0pt}AbsV\ v{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ True{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}ty\ {\isacharparenleft}{\kern0pt}MapV\ {\isacharparenleft}{\kern0pt}Inr\ {\isacharparenleft}{\kern0pt}Inr\ m{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ wf{\isacharunderscore}{\kern0pt}L\ {\isadigit{1}}\ m{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}ty\ {\isacharparenleft}{\kern0pt}MapV\ {\isacharparenleft}{\kern0pt}Inr\ {\isacharparenleft}{\kern0pt}Inl\ m{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ wf{\isacharunderscore}{\kern0pt}L\ {\isadigit{2}}\ m{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}ty\ {\isacharparenleft}{\kern0pt}MapV\ {\isacharparenleft}{\kern0pt}Inl\ m{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ wf{\isacharunderscore}{\kern0pt}L\ {\isadigit{3}}\ m{\isachardoublequoteclose}\isanewline
+\end{isabellebody}
+
+
+\paragraph{Problem 2: Function behaviour outside the domain}
+Let's say, we have a map in Boogie \texttt{(lambda x: int :: x+1)}.
+In its embedding in Isabelle the domain is not constrained to integers only
+So we might have two maps, that both capture the same behaviour on integers,
+but might differ on boolean for example.
+Therefore, we also want to make sure that the all the maps, that capture the same behaviour in Boogie,
+also behave the same outside their intended domain.
+The easiest thing to do here is to enforce a sentinel value,
+for the keys outside the intended domain.
+The values outside the intended domain, are not only the ones with the wrong type,
+but also all the not well formed values.
+Therefore, we want to enforce something like this:
+
+\begin{isabellebody}
+{\isasymforall}k{\isachardot}{\kern0pt}\ {\isacharparenleft}{\kern0pt}{\isasymnot}wf\ k\ {\isasymor}\ type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ k\ {\isasymnoteq}\ key{\isacharunderscore}{\kern0pt}ty\ {\isacharparenleft}{\kern0pt}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ m{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isasymlongrightarrow}\ {\isacharparenleft}{\kern0pt}selectImpl\ m\ k{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ sentinel?{\kern0pt}
+\end{isabellebody}
+
+The question is, what kind of \texttt{sentinel?} value we need?
+As we have seen in Section~\ref{sec:type-safety}, we are not able to cleanly case distinct on \texttt{wf k},
+as \texttt{wf} may not appear in a negative position.
+Therefore, we might have a \texttt{k}, where we are not sure if it is \texttt{wf k} or \texttt{¬wf k},
+and therefore not sure if \texttt{type\_of\_val (selectImpl m k) = val\_ty (type\_of\_val m)} needs to hold or \texttt{type\_of\_val (selectImpl m k) = sentinel?}.
+If the \texttt{sentinel?} is of type \texttt{val\_ty (type\_of\_val m)}, then both conditions hold anyway, and we have no problem.
+Fortunately, we have a function \texttt{val\_of\_type}, that gives us a value of the given type,
+which we can use for our sentinel value:\\
+\texttt{sentinel? = val\_of\_type (val\_ty (type\_of\_val m))}
+
+% [TODO picture of table showing the fuzzy border]
+
+
+\subsubsection{Well Formed Definition}
 \label{sec:wf-definition}
-This section should conceptually appear before Sections~\ref{sec:select} and~\ref{sec:store}, because this design decision affects both operations.
 
-\begin{verbatim}
-inductive wf where
-    wfLitV: "wf (LitV v)" | wfAbsV: "wf (AbsV v)" |
-    wfMapV: "[| wf_ty m;  (ALL k. wf (selectImpl m k));
-      (ALL k. (~wf k | type_of_val k != key_ty (type_of_val m)) --> (selectImpl m k) = val_of_type (val_ty (type_of_val m)));
-      (ALL k. type_of_val (selectImpl m k) = val_ty (type_of_val m))
-      |] ==> wf m"
-\end{verbatim}
+Using all these constraints, we arrive at our final definition of \texttt{wf}:
 
-\subsubsection{Conversion from and to internal datatype [Early notes]}
+\begin{isabellebody}
+\isakeywordONE{inductive}\isamarkupfalse%
+\ wf\ \isakeywordTWO{where}\isanewline
+\ \ \ \ wfLitV{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}wf\ {\isacharparenleft}{\kern0pt}LitV\ v{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\ {\isacharbar}{\kern0pt}\ wfAbsV{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}wf\ {\isacharparenleft}{\kern0pt}AbsV\ v{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\ {\isacharbar}{\kern0pt}\isanewline
+\ \ \ \ wfMapV{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isasymlbrakk}\ wf{\isacharunderscore}{\kern0pt}ty\ m{\isacharsemicolon}{\kern0pt}\ \ {\isacharparenleft}{\kern0pt}{\isasymforall}k{\isachardot}{\kern0pt}\ wf\ {\isacharparenleft}{\kern0pt}selectImpl\ m\ k{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharsemicolon}{\kern0pt}\isanewline
+\ \ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isasymforall}k{\isachardot}{\kern0pt}\ {\isacharparenleft}{\kern0pt}{\isasymnot}wf\ k\ {\isasymor}\ type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ k\ {\isasymnoteq}\ key{\isacharunderscore}{\kern0pt}ty\ {\isacharparenleft}{\kern0pt}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ m{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isasymlongrightarrow}\ {\isacharparenleft}{\kern0pt}selectImpl\ m\ k{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ val{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}type\ {\isacharparenleft}{\kern0pt}val{\isacharunderscore}{\kern0pt}ty\ {\isacharparenleft}{\kern0pt}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ m{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharsemicolon}{\kern0pt}\isanewline
+\ \ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isasymforall}k{\isachardot}{\kern0pt}\ type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ {\isacharparenleft}{\kern0pt}selectImpl\ m\ k{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ val{\isacharunderscore}{\kern0pt}ty\ {\isacharparenleft}{\kern0pt}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ m{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ \ \ {\isasymrbrakk}\ {\isasymLongrightarrow}\ wf\ m{\isachardoublequoteclose}\isanewline
+\end{isabellebody}
+
+
+\subsubsection{Conversion from and to internal datatype}
 \label{sec:conversion-internal}
-[TODO should this just be in the appendix?]
+% [TODO should this just be in the appendix?]
 
 For our map semantics, we introduced these different levels (Section~\ref{sec:stratification-solution}).
 These only matter here, so we want to hide this implementation detail from the rest of the semantics.
@@ -733,7 +863,7 @@ That is why we made the \texttt{val} datatype generic (Section~\ref{sec:datatype
 Therefore, we need a way to translate the instantiated version of the generic val datatype,
 into our level representation:
 
-[TODO potentially simplify sum semantics, i.e. Inr (Inl x) -> In2 x]
+% [TODO potentially simplify sum semantics, i.e. Inr (Inl x) -> In2 x]
 \begin{verbatim}
 fun toVal3210 :: "'a valn => 'a val3210" where
     "toVal3210 (LitV v) = (Inr (Inr (Inr (LitV0 v))))"
@@ -779,8 +909,6 @@ default (see Section~\ref{sec:wf-definition})
 
 \subsubsection{Store}
 \label{sec:store}
-
-\subsubsection{Well Formed}
 
 \subsubsection{Showing one wf map?}
 Appendix?
