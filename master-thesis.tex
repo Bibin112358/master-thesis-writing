@@ -144,7 +144,7 @@ Using a map, we can select a value at a given key
 and obtain an updated map by storing a new value at a corresponding key.
 
 Interestingly, lambda expressions can be treated as maps.
-Thus, a map behaves like a function that are first-class values and may be updated.
+Thus, a map behaves like a function that is a first-class value and may be updated.
 Importantly, it is \textbf{not} like a dictionary or an association list,
 as those are usually finite mappings.
 
@@ -182,7 +182,7 @@ procedure poly ()
 }
 \end{verbatim}
 
-This is a powerful feature, and its support outside the scope of this thesis,
+This is a powerful feature whose support is outside the scope of this thesis,
 as outlined in our goals (\ref{sec:goals-to-support}).
 
 % [TODO ref Boogie manual]\
@@ -255,11 +255,11 @@ Dafny uses maps in the domain and codomain of other maps.
 Empirically, it appears to use only one level of nesting in the domain,
 so supporting two levels of map domain nesting is sufficient for now.
 
-Another limitation that we allow is that the semantics might be program dependent.
+Another limitation we allow is that the semantics might be program dependent.
 This implies that a single fully uniform semantic definition may not cover all programs,
 and that parts of the semantics may depend on the input program.
 One example is that the semantics might need to explicitly instantiate
-the amount of nesting levels in maps, that we might extract from a given Boogie program.
+the number of nesting levels in maps that we extract from a given Boogie program.
 For example, \texttt{[int]int} might use a semantics with nesting level of 1,
 whereas a program using \texttt{[[int]int]int} might use a semantics with nesting level 2.
 
@@ -343,7 +343,7 @@ This yields formal goals that our map semantics must satisfy.
 \Bigr)
 \]
 
-These differ greatly with different type encodings.
+These differ greatly across type encodings.
 Since the preceding work was built on polymorphic type encoding,
 we will be focusing on its encoding of the maps.
 
@@ -415,7 +415,7 @@ The store operation returns a map of the same type.
   \end{aligned}
 \end{equation}
 
-This shows the behaviour of store is updating at a position.
+This shows that store behavior corresponds to updating at a position.
 
 % TODO ref stable
 \begin{align*}
@@ -432,10 +432,10 @@ This shows that the store does not affect the other positions.
 
 The current axiom, talking about the map update \eqref{ax:map-update-strong},
 is too strong for our semantics,
-that relies on our stratification solution, explained leater in section \ref{sec:stratification-solution}.
-The main problem is, that this axiom has to hold for every value $m$,
-even is it is not a map, and every value $k$,
-even if its type does not match the key type of $m$.
+which relies on our stratification solution, explained later in Section~\ref{sec:stratification-solution}.
+The main problem is that this axiom has to hold for every value $m$,
+even if it is not a map, and for every value $k$,
+even if its type does not match the domain type of $m$.
 Accordingly, we weaken the axiom:
 
 \begin{equation}
@@ -756,12 +756,12 @@ We extend our definition of \texttt{wf} accordingly:
 \ \ \ \ \ \ {\isasymrbrakk}\ {\isasymLongrightarrow}\ wf\ m{\isachardoublequoteclose}
 \end{isabellebody}
 
-\subsubsection{No Duplicate representation}
+\subsubsection{No Duplicate Representation}
 \label{sec:no-duplicate}
 
 As discussed in Section~\ref{sec:goals-to-support},
 we want our maps to be extensional.
-More concretely, this means, that we want there to be a unique Isabelle representation for each Boogie map.
+More concretely, this means that we want there to be a unique Isabelle representation for each Boogie map.
 This means that if two map values agree for each key,
 then they should be represented by the same Isabelle representation.
 The current definition has two issues in satisfying this property.
@@ -801,17 +801,17 @@ need to either have their domain on level $n-1$ or their codomain on level $n$.
 \end{isabellebody}
 
 
-\paragraph{Problem 2: Function behaviour outside the domain}
+\paragraph{Problem 2: Function behavior outside the domain}
 Consider the Boogie map \texttt{(lambda x: int :: x+1)}.
 In its embedding in Isabelle the domain is not constrained to integers only
-So we might have two maps, that both capture the same behaviour on integers,
+So we might have two maps that both capture the same behavior on integers,
 but might differ on booleans.
-Therefore, we also want to make sure that the all the maps, that capture the same behaviour in Boogie,
+Therefore, we also want to make sure that all maps that capture the same behavior in Boogie,
 also behave the same outside their intended domain.
 The easiest thing to do here is to enforce a sentinel value,
 for the keys outside the intended domain.
-The values outside the intended domain, are not only the ones with the wrong type,
-but also all the not well-formed values.
+Values outside the intended domain are not only those with the wrong type,
+but also those that are not well formed.
 Therefore, we enforce a property of the following form:
 
 \begin{isabellebody}
@@ -824,7 +824,7 @@ as \texttt{wf} may not appear in a negative position.
 Therefore, we might have a \texttt{k}, where we are not sure if it is \texttt{wf k} or \texttt{¬wf k},
 and therefore not sure if \texttt{type\_of\_val (selectImpl m k) = val\_ty (type\_of\_val m)} needs to hold or \texttt{type\_of\_val (selectImpl m k) = sentinel?}.
 If the \texttt{sentinel?} is of type \texttt{val\_ty (type\_of\_val m)}, then both conditions hold anyway, and we have no problem.
-Fortunately, we have a function \texttt{val\_of\_type}, that gives us a value of the given type,
+Fortunately, we have a function \texttt{val\_of\_type} that gives us a value of the given type,
 which we can use for our sentinel value:\\
 \texttt{sentinel? = val\_of\_type (val\_ty (type\_of\_val m))}
 
@@ -880,7 +880,7 @@ fun val3ToValn :: "'a val3210 => 'a valn" where
 \label{sec:select}
 Let us define a select function for our current map semantics.
 
-First, we define an auxiliary function, that performs the operation on our internal representation:
+First, we define an auxiliary function that performs the operation on our internal representation:
 
 % [TODO potentially simplify semantics: remove primitive cases, move default case to non-aux function to avoid conversions]
 \begin{verbatim}
@@ -897,8 +897,8 @@ fun selectImplAux :: "'a val3210 => 'a val3210 => 'a val3210" where
 % This is addressed later in Section~\ref{sec:proofgen-module}.
 
 We now focus on \texttt{"selectImplAux (Inr (Inl (FunL m \_ \_))) (Inr (Inr k)) = Inr (m k)"}.
-This is the case, where we have a map on level $2$ and a key of level $\le 1$.
-Now, $m$ is a function, that takes values of level $\le 1$ and returns values of level $\le 2$.
+This is the case where we have a map on level $2$ and a key of level $\le 1$.
+Now, $m$ is a function that takes values of level $\le 1$ and returns values of level $\le 2$.
 Therefore, \texttt{m\ k} is of level $\le 2$
 and \texttt{Inr} makes sure that the result is of type \texttt{'a val3210}.
 The other two map cases are analogous.
