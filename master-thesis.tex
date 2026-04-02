@@ -570,6 +570,7 @@ datatype 'a val0 = LitV0 lit | AbsV0 (the_absv: 'a)
 type synonym 'a val1 = "'a val0 L"
 type_synonym 'a val2 = "('a val1 + 'a val0) L"
 type_synonym 'a val3 = "('a val2 + 'a val1 + 'a val0) L"
+type_synonym 'a val3210 = "'a val3 + 'a val2 + 'a val1 + 'a val0"
 \end{verbatim}
 
 To integrate these stratified levels into the core semantics,
@@ -880,15 +881,15 @@ fun val3ToValn :: "'a val3210 => 'a valn" where
   | "val3ToValn (Inl m) = (MapV (Inl m))"
 \end{verbatim}
 
-\subsubsection{Select [Early Notes]}
+\subsubsection{Select}
 \label{sec:select}
-Now we can define a select function for our current map semantics.
+Let us define a select function for our current map semantics.
 
 First, we define an auxiliary function, that performs the operation on our internal representation:
 
-[TODO potentially simplify semantics: remove primitive cases, move default case to non-aux function to avoid conversions]
+% [TODO potentially simplify semantics: remove primitive cases, move default case to non-aux function to avoid conversions]
 \begin{verbatim}
-fun selectImplAux :: "'a::absval val3210 => 'a val3210 => 'a val3210" where
+fun selectImplAux :: "'a val3210 => 'a val3210 => 'a val3210" where
     "selectImplAux (Inr (Inr (Inr (LitV0 v)))) _ = (Inr (Inr (Inr undefined)))"
   | "selectImplAux (Inr (Inr (Inr (AbsV0 v)))) _ = (Inr (Inr (Inr undefined)))"
   | "selectImplAux (Inr (Inr (Inl (FunL m _ _)))) (Inr (Inr (Inr k))) = Inr (Inr (m k))"
@@ -897,29 +898,164 @@ fun selectImplAux :: "'a::absval val3210 => 'a val3210 => 'a val3210" where
   | "selectImplAux m _ = toVal3210 (val_of_type (val_ty (type_of_val (val3ToValn m))))"
 \end{verbatim}
 
-\texttt{absval} is a type class, that is needed to call \texttt{type\_of\_val}.
-This is addressed later in Section~\ref{sec:proofgen-module}.
+% \texttt{absval} is a type class, that is needed to call \texttt{type\_of\_val}.
+% This is addressed later in Section~\ref{sec:proofgen-module}.
 
-Let's focus on \texttt{"selectImplAux (Inr (Inl (FunL m \_ \_))) (Inr (Inr k)) = Inr (m k)"}
-\ldots
+Let's focus on \texttt{"selectImplAux (Inr (Inl (FunL m \_ \_))) (Inr (Inr k)) = Inr (m k)"}.
+This is the case, where we have a map on level $2$ and a key of level $\le 1$.
+Now, $m$ is a function, that takes values of level $\le 1$ and returns values of level $\le 2$.
+Therefore, \texttt{m\ k} is of level $\le 2$
+and \texttt{Inr} makes sure that the result is of type \texttt{'a val3210}.
+The other two map cases are similar.
 
-Primitive (see Section~\ref{sec:wf-definition})
+For the primitve cases, the return value does not matter,
+as long as it is a well formed value,
+to make sure \texttt{selectImpl} remains closed under \texttt{wf}.
+So, we decided to return an undefined\footnote{more acurately described as unspecified} %TODO ref
+primitive value, as all of them are well formed.
 
-default (see Section~\ref{sec:wf-definition})
+In case we have a key from a level that the map does not support,
+we will return the sentinel value of the value type of the map,
+to ensure the well formed properties.
+
+With this auxiliary function, we can define the actual one,
+by converting to and from the internal representations:
+
+\begin{isabellebody}
+\isakeywordONE{fun}\isamarkupfalse%
+\ selectImpl\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a{\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}absval\ valn\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ valn\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ valn{\isachardoublequoteclose}\ \isakeywordTWO{where}\isanewline
+\ \ {\isachardoublequoteopen}selectImpl\ m\ k\ {\isacharequal}{\kern0pt}\ val{\isadigit{3}}ToValn\ {\isacharparenleft}{\kern0pt}selectImplAux\ {\isacharparenleft}{\kern0pt}toVal{\isadigit{3}}{\isadigit{2}}{\isadigit{1}}{\isadigit{0}}\ m{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}toVal{\isadigit{3}}{\isadigit{2}}{\isadigit{1}}{\isadigit{0}}\ k{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\end{isabellebody}
+
 
 \subsubsection{Store}
 \label{sec:store}
 
-\subsubsection{Showing one wf map?}
-Appendix?
+For store we have a similar story, of first creating an auxiliary function:
+
+\begin{isabellebody}
+\isakeywordONE{fun}\isamarkupfalse%
+\ storeImplAux\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ val{\isadigit{3}}{\isadigit{2}}{\isadigit{1}}{\isadigit{0}}\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ val{\isadigit{3}}{\isadigit{2}}{\isadigit{1}}{\isadigit{0}}\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ val{\isadigit{3}}{\isadigit{2}}{\isadigit{1}}{\isadigit{0}}\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ val{\isadigit{3}}{\isadigit{2}}{\isadigit{1}}{\isadigit{0}}{\isachardoublequoteclose}\ \isakeywordTWO{where}\isanewline
+\ \ \ \ {\isachardoublequoteopen}storeImplAux\ {\isacharparenleft}{\kern0pt}Inr\ {\isacharparenleft}{\kern0pt}Inr\ {\isacharparenleft}{\kern0pt}Inl\ {\isacharparenleft}{\kern0pt}FunL\ m\ tk\ tv{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}Inr\ {\isacharparenleft}{\kern0pt}Inr\ {\isacharparenleft}{\kern0pt}Inr\ k{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}Inr\ {\isacharparenleft}{\kern0pt}Inr\ v{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ \ \ {\isacharequal}{\kern0pt}\ {\isacharparenleft}{\kern0pt}Inr\ {\isacharparenleft}{\kern0pt}Inr\ {\isacharparenleft}{\kern0pt}Inl\ {\isacharparenleft}{\kern0pt}FunL\ {\isacharparenleft}{\kern0pt}m{\isacharparenleft}{\kern0pt}k\ {\isacharcolon}{\kern0pt}{\isacharequal}{\kern0pt}\ v{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ tk\ tv{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}storeImplAux\ {\isacharparenleft}{\kern0pt}Inr\ {\isacharparenleft}{\kern0pt}Inl\ {\isacharparenleft}{\kern0pt}FunL\ m\ tk\ tv{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}Inr\ {\isacharparenleft}{\kern0pt}Inr\ k{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}Inr\ v{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ \ \ {\isacharequal}{\kern0pt}\ {\isacharparenleft}{\kern0pt}Inr\ {\isacharparenleft}{\kern0pt}Inl\ {\isacharparenleft}{\kern0pt}FunL\ {\isacharparenleft}{\kern0pt}m{\isacharparenleft}{\kern0pt}k\ {\isacharcolon}{\kern0pt}{\isacharequal}{\kern0pt}\ v{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ tk\ tv{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}storeImplAux\ {\isacharparenleft}{\kern0pt}Inl\ {\isacharparenleft}{\kern0pt}FunL\ m\ tk\ tv{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}Inr\ k{\isacharparenright}{\kern0pt}\ v\isanewline
+\ \ \ \ \ \ {\isacharequal}{\kern0pt}\ {\isacharparenleft}{\kern0pt}Inl\ {\isacharparenleft}{\kern0pt}FunL\ {\isacharparenleft}{\kern0pt}m{\isacharparenleft}{\kern0pt}k\ {\isacharcolon}{\kern0pt}{\isacharequal}{\kern0pt}\ v{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ tk\ tv{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}storeImplAux\ x\ {\isacharunderscore}{\kern0pt}\ {\isacharunderscore}{\kern0pt}\ {\isacharequal}{\kern0pt}\ x{\isachardoublequoteclose}\isanewline
+\end{isabellebody}
+
+Again, if we have cases for each map level with their corresponding supported levels for keys.
+The difference is, instead of function application, we perform a function update.
+If the key level is not in the domain, or if we have primitive values, we just return the unmodified value.
+
+The actial store does a bit more, than just converting to and from internal representation:
+
+\begin{isabellebody}
+\isakeywordONE{fun}\isamarkupfalse%
+\ storeImpl\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a{\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}absval\ valn\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ valn\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ valn\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ valn{\isachardoublequoteclose}\ \isakeywordTWO{where}\isanewline
+\ \ {\isachardoublequoteopen}storeImpl\ m\ k\ v\ {\isacharequal}{\kern0pt}\ {\isacharparenleft}{\kern0pt}if\ type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ m\ {\isacharequal}{\kern0pt}\ TMap\ {\isacharparenleft}{\kern0pt}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ k{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ v{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ then\ val{\isadigit{3}}ToValn\ {\isacharparenleft}{\kern0pt}storeImplAux\ {\isacharparenleft}{\kern0pt}toVal{\isadigit{3}}{\isadigit{2}}{\isadigit{1}}{\isadigit{0}}\ m{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}toVal{\isadigit{3}}{\isadigit{2}}{\isadigit{1}}{\isadigit{0}}\ k{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}toVal{\isadigit{3}}{\isadigit{2}}{\isadigit{1}}{\isadigit{0}}\ v{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ else\ m{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\end{isabellebody}
+
+It also makes sure that the update will only happen if the types match,
+otherwise we run the risk of breaking well formedness.
+
 
 \subsubsection{Proving Axioms}
-Proofs in Appendix?
+
+Having defined the datatype, well formedness, select and store,
+we need to show, that it actually fulfills the goals we want,
+especially from the VC map axioms \ref{sec:vc-map-axioms}.
+
+This are the we managed to prove, leaving out the proofs for brevity:
+
+\begin{isabellebody}
+\isakeywordONE{lemma}\isamarkupfalse%
+\ ArrayAxUpdate{\isacharcolon}{\kern0pt}\isanewline
+\ \ \isakeywordTWO{assumes}\ {\isachardoublequoteopen}wf\ M{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{assumes}\ {\isachardoublequoteopen}wf\ k{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{assumes}\ {\isachardoublequoteopen}wf\ v{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{assumes}\ {\isachardoublequoteopen}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ M\ {\isacharequal}{\kern0pt}\ TMap\ {\isacharparenleft}{\kern0pt}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ k{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ v{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{shows}\ {\isachardoublequoteopen}selectImpl\ {\isacharparenleft}{\kern0pt}storeImpl\ M\ k\ v{\isacharparenright}{\kern0pt}\ k\ {\isacharequal}{\kern0pt}\ v{\isachardoublequoteclose}\isanewline
+
+\isakeywordONE{lemma}\isamarkupfalse%
+\ ArrayAxStable{\isacharcolon}{\kern0pt}\isanewline
+\ \ \isakeywordTWO{assumes}\ {\isachardoublequoteopen}x\ {\isasymnoteq}\ y{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{shows}\ {\isachardoublequoteopen}selectImpl\ {\isacharparenleft}{\kern0pt}storeImpl\ M\ x\ v{\isacharparenright}{\kern0pt}\ y\ {\isacharequal}{\kern0pt}\ selectImpl\ M\ y{\isachardoublequoteclose}\isanewline
+
+\isakeywordONE{lemma}\isamarkupfalse%
+\ extensionalityMapV{\isacharcolon}{\kern0pt}\isanewline
+\ \ \isakeywordTWO{assumes}\ {\isachardoublequoteopen}wf\ {\isacharparenleft}{\kern0pt}MapV\ m{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{assumes}\ {\isachardoublequoteopen}wf\ {\isacharparenleft}{\kern0pt}MapV\ n{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{assumes}\ {\isachardoublequoteopen}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ {\isacharparenleft}{\kern0pt}MapV\ m{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ {\isacharparenleft}{\kern0pt}MapV\ n{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{assumes}\ {\isachardoublequoteopen}{\isasymforall}k{\isachardot}{\kern0pt}\ {\isacharparenleft}{\kern0pt}wf\ k\ {\isasymand}\ type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ k\ {\isacharequal}{\kern0pt}\ key{\isacharunderscore}{\kern0pt}ty\ {\isacharparenleft}{\kern0pt}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ {\isacharparenleft}{\kern0pt}MapV\ m{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isasymlongrightarrow}\ selectImpl\ {\isacharparenleft}{\kern0pt}MapV\ m{\isacharparenright}{\kern0pt}\ k\ {\isacharequal}{\kern0pt}\ selectImpl\ {\isacharparenleft}{\kern0pt}MapV\ n{\isacharparenright}{\kern0pt}\ k{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{shows}\ {\isachardoublequoteopen}m\ {\isacharequal}{\kern0pt}\ n{\isachardoublequoteclose}\isanewline
+
+\isakeywordONE{lemma}\isamarkupfalse%
+\ selectClosedWf{\isacharcolon}{\kern0pt}\isanewline
+\ \ \isakeywordTWO{assumes}\ {\isachardoublequoteopen}wf\ m{\isachardoublequoteclose}\isanewline
+\ \isakeywordTWO{shows}\ {\isachardoublequoteopen}wf\ {\isacharparenleft}{\kern0pt}selectImpl\ m\ k{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+
+\isakeywordONE{lemma}\isamarkupfalse%
+\ storeClosedWf{\isadigit{3}}{\isacharcolon}{\kern0pt}\isanewline
+\ \ \isakeywordTWO{assumes}\ {\isachardoublequoteopen}wf\ m{\isachardoublequoteclose}\ {\isachardoublequoteopen}wf\ k{\isachardoublequoteclose}\ {\isachardoublequoteopen}wf\ v{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{assumes}\ {\isachardoublequoteopen}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ m\ {\isacharequal}{\kern0pt}\ TMap\ {\isacharparenleft}{\kern0pt}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ k{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ v{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{shows}\ {\isachardoublequoteopen}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ {\isacharparenleft}{\kern0pt}selectImpl\ {\isacharparenleft}{\kern0pt}storeImpl\ m\ k\ v{\isacharparenright}{\kern0pt}\ x{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ val{\isacharunderscore}{\kern0pt}ty\ {\isacharparenleft}{\kern0pt}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ {\isacharparenleft}{\kern0pt}storeImpl\ m\ k\ v{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+
+\end{isabellebody}
+
+These lemmas show us, that the our definition fulfill the required properties.
+Though, they have a lot of well formedness assumptions.
+We can get rid of them, by baking them into our type as we will see in Section~\ref{sec:typedef-lifting}.
 
 \subsubsection{Typedef and lifting}
 \label{sec:typedef-lifting}
 
-\subsubsection{Final Lemmas (for VC phases and so on)}
+We have already seen in Section~\ref{sec:constrained-types}
+on how to bake our well formedeness into a type.
+
+We know need to "lift" our select and store functions,
+and their lemmas, such that they work on the new type:
+
+\begin{isabellebody}
+\isakeywordONE{lift{\isacharunderscore}{\kern0pt}definition}\isamarkupfalse%
+\ wf{\isacharunderscore}{\kern0pt}select\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a{\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}absval\ wf{\isacharunderscore}{\kern0pt}val\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ wf{\isacharunderscore}{\kern0pt}val\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ wf{\isacharunderscore}{\kern0pt}val{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{is}\ selectImpl\isanewline
+<proof>\isanewline
+
+\isakeywordONE{lift{\isacharunderscore}{\kern0pt}definition}\isamarkupfalse%
+\ wf{\isacharunderscore}{\kern0pt}store\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a{\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}absval\ wf{\isacharunderscore}{\kern0pt}val\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ wf{\isacharunderscore}{\kern0pt}val\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ wf{\isacharunderscore}{\kern0pt}val\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ wf{\isacharunderscore}{\kern0pt}val{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{is}\ storeImpl\isanewline
+<proof>\isanewline
+
+\isakeywordONE{lemma}\isamarkupfalse%
+\ Ax{\isadigit{1}}{\isacharcolon}{\kern0pt}\isanewline
+\ \ \isakeywordTWO{fixes}\ m{\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}{\isachardoublequoteopen}{\isacharprime}{\kern0pt}a{\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}absval\ wf{\isacharunderscore}{\kern0pt}val{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{assumes}\ {\isachardoublequoteopen}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ m\ {\isacharequal}{\kern0pt}\ TMap\ {\isacharparenleft}{\kern0pt}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ k{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ v{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{shows}\ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}select\ {\isacharparenleft}{\kern0pt}wf{\isacharunderscore}{\kern0pt}store\ m\ k\ v{\isacharparenright}{\kern0pt}\ k\ {\isacharequal}{\kern0pt}\ v{\isachardoublequoteclose}\isanewline
+<proof>\isanewline
+
+\isakeywordONE{lemma}\isamarkupfalse%
+\ Ex{\isacharcolon}{\kern0pt}\isanewline
+\ \ \isakeywordTWO{assumes}\ {\isachardoublequoteopen}m\ {\isacharequal}{\kern0pt}\ MapV\ m{\isacharprime}{\kern0pt}\ {\isasymand}\ n\ {\isacharequal}{\kern0pt}\ MapV\ n{\isacharprime}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{assumes}\ {\isachardoublequoteopen}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ m\ {\isacharequal}{\kern0pt}\ type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ n{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{assumes}\ {\isachardoublequoteopen}{\isasymforall}k{\isachardot}{\kern0pt}\ type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ k\ {\isacharequal}{\kern0pt}\ key{\isacharunderscore}{\kern0pt}ty\ {\isacharparenleft}{\kern0pt}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ m{\isacharparenright}{\kern0pt}\ {\isasymlongrightarrow}\ wf{\isacharunderscore}{\kern0pt}select\ m\ k\ {\isacharequal}{\kern0pt}\ wf{\isacharunderscore}{\kern0pt}select\ n\ k{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{shows}\ {\isachardoublequoteopen}m\ {\isacharequal}{\kern0pt}\ n{\isachardoublequoteclose}\isanewline
+<proof>\isanewline
+
+\isakeywordONE{lemma}\isamarkupfalse%
+\ Ax{\isadigit{2}}{\isacharunderscore}{\kern0pt}wf{\isacharunderscore}{\kern0pt}val{\isacharcolon}{\kern0pt}\isanewline
+\ \ \isakeywordTWO{shows}\ {\isachardoublequoteopen}x\ {\isacharequal}{\kern0pt}\ y\ {\isasymor}\ wf{\isacharunderscore}{\kern0pt}select\ {\isacharparenleft}{\kern0pt}wf{\isacharunderscore}{\kern0pt}store\ m\ x\ v{\isacharparenright}{\kern0pt}\ y\ {\isacharequal}{\kern0pt}\ wf{\isacharunderscore}{\kern0pt}select\ m\ y{\isachardoublequoteclose}\isanewline
+<proof>\isanewline
+
+\end{isabellebody}
+
+With this type and lemmas, we were able to define a suitable semantics for maps,
+that may have three levels of nestings in their domain,
+that fulfill our goals \ref{sec:goals-to-support}, especially the VC map aximos \ref{sec:vc-map-axioms}.
+
 
 \subsection{Alternative Approaches}
 
