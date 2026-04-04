@@ -1022,14 +1022,240 @@ We must now "lift" our select and store functions, alongside their proven lemmas
 With this lifted type and these verified lemmas, we successfully defined a formally sound semantics for Boogie maps, supporting up to three levels of domain nesting, that fully satisfies our targeted goals (\ref{sec:goals-to-support}), particularly the VC map axioms (\ref{sec:vc-map-axioms}).
 
 
-\subsection{Alternative Approaches}
-
-\subsection{Adjusting Proofgen Module}
+\subsection{Adjusting Foundational Boogie and Proofgen Module}
 \label{sec:proofgen-module}
 
+The solution described in Section~\ref{sec:stratification-solution}
+is now ready to be integrated in the other parts of the semantics.
+
+\subsubsection{Abstract Value Type Function}
+
+First we have to talk about something we left out in the solution.
+The \texttt{type\_of\_val} function used to have an additional parameter.
+Its purpose was to provde the type for an abstract value:
+
+\begin{verbatim}
+type_synonym 'a absval_ty_fun = "'a => (tcon_id x ty list)"
+
+fun type_of_val :: "'a absval_ty_fun => 'a val => ty"
+  where 
+   "type_of_val A (LitV v) = TPrim (type_of_lit v)"
+ | "type_of_val A (AbsV v) = TCon (fst (A v)) (snd (A v))"
+\end{verbatim}
+
+This is necessary, since abstract types are user-defined,
+and thus not knowable in advance.
+So the \texttt{type\_of\_val} behavior for abstract values has been captured
+as a function and passed around everywhere its needed.
+
+This is a hurdle for us now, since \texttt{type\_of\_val} is an intergral part for \texttt{wf},
+which in turn is used to define our new values \texttt{'a wf\_val} \ref{sec:constrained-types}.
+The problem is, we cannot make the type definition dependent on another value,
+in this case \texttt{absval\_ty\_fun}.
+Not only is there no syntactic way to do that,
+but \texttt{typedef} are not allowed to be in a locale. % TODO ref
+
+There is a way out though, using type classes.
+We can restrict our type parameter \texttt{'a} using a type class,
+which provides us with the given functionality:
+
+\begin{verbatim}
+class absval =
+  fixes absval_ty :: "'a => (tcon_id x ty list)"
+
+fun type_of_val :: "('a::absval, 'm) val => ty"
+  where
+   "type_of_val (LitV v) = TPrim (type_of_lit v)"
+ | "type_of_val (AbsV v) = TCon (fst (absval_ty v)) (snd (absval_ty v))"
+\end{verbatim}
+
+The typeclass provides the functionality of restricting a type
+and in turn guaranteing certain properties.
+In this case if we apply the type class \texttt{'a::absval}
+it guarantees us that the existence of the function \texttt{absval\_ty :: "'a => (tcon\_id x ty list)"},
+which takes the role of the previsously explicitely passed around argument.
+
+With that we can actually define our new value type:
+
+\begin{verbatim}
+definition wf_map_set :: "'a::absval val321 set" where
+"wf_map_set = {m. wf (MapV m)}"
+
+typedef (overloaded) 'a::absval wf_maps = "wf_map_set :: 'a::absval val321 set"
+<proof>
+
+type_synonym 'a wf_val = "('a, 'a wf_maps) val"
+\end{verbatim}
+
+So instead of having an explicit argument \texttt{A::absval\_ty\_fun}
+that we need to call \texttt{type\_of\_val A v},
+we have to add the type class to our type parameter \texttt{'a::absval} ,
+everywhere where \texttt{type\_of\_val} is used.
+
+We also need a way to extract the map type,
+which is dependent on our type parameter \texttt{'m}.
+In this case, we could pass in an explicit argument, like before,
+since our type definition is not dependent on it.
+Since we already have the type class, we decided to use one for this as well,
+out of symmetry, and as this seems like a less intrusive way to introduce to the semantics:
+
+\begin{verbatim}
+class absval =
+  fixes absval_ty :: "'a => (tcon_id x ty list)"
+
+class mapval =
+  fixes mapval_ty :: "'a => (ty x ty)"
+
+fun type_of_val :: "('a::absval, 'm) val => ty"
+  where
+   "type_of_val (LitV v) = TPrim (type_of_lit v)"
+ | "type_of_val (AbsV v) = TCon (fst (absval_ty v)) (snd (absval_ty v))"
+ | "type_of_val (MapV v) = TMap (fst (mapval_ty v)) (snd (mapval_ty v))"
+\end{verbatim}
+
+
+\subsubsection{Expression Reduction, Big Step Semantics and Locale}
+
+The second important part for map semantics,
+after defining how map values are represented,
+is to define map behaviors in the semantics.
+The preceeding work has a expression reduction function,
+based on big step semantics.
+This is where we need to define how map select and map store reduce.
+Remember, we want to hide the implementation details of maps from the rest of the semantics.
+So we cannot use the functions we defined earlier,
+as we might want to have the ability to swap them out later,
+for example for a map semantics supporting more nesting levels.
+To solve this issue, we enclose the reduction in a Isabelle locale % TODO ref Isabelle manual?,
+that provides the necessary functions:
+
+\begin{verbatim}
+locale semantics =
+  fixes map_select :: "('a::absval, 'm::mapval) val => ('a, 'm) val => ('a, 'm) val"
+  fixes map_store  :: "('a, 'm) val => ('a, 'm) val => ('a, 'm) val => ('a, 'm) val"
+begin
+
+  | RedMapSelect: 
+\end{verbatim}
+
+Now, any other definition, that is dependent on this reduction definition,
+has to be also in this locale context.
+
+\begin{verbatim}
+  context semantics begin
+\end{verbatim}
+
+And if we want to use the semantics with a specific map semantics,
+we are able to instantiate it:
+
+\begin{verbatim}
+  interpretation semantics wf_select wf_store .
+\end{verbatim}
+
+After this point, all the theories, definitions and lemmas from the locale semantics
+are available with \texttt{map\_select} replaced with \texttt{wf\_select},
+and \texttt{map\_store} replaced with \texttt{wf\_store}.
+
+Part of the semantics lives in a locale now,
+we rearranged some definitions and lemmas,
+minimizing the amount dependent on the locale.
+
+\subsubsection{Remaining Adjustments in Foundational Boogie}
+
+Since there are new constructors for maps in various datatypes,
+we had to adjust some definitions and lemmas,
+by extending it with map cases, and proving them when necessary.
+
+Two changes, that are simple, but account for most of the syntactic changes
+were changing \texttt{'a val} to \texttt{('a, 'm) val},
+since it has the additional type parameter for the map semantics,
+and removing the occurences of \texttt{A::absval\_ty\_fun},
+since this became obsolete with the new type class.
+
+We also need to add the type classes were \texttt{'a::absval} and \texttt{'m::mapval} were necessary.
+Notably, we also need to add type constrained to bounded quantifiers in proofs.
+For example, if a proof has an for all or exists quantifier for values,
+\texttt{$\forall$ v}, we need to add an explicit type constraint, \texttt{$\forall$ v :: ('a, 'm) val}.
+This is to force the same type parameters on the values,
+and not generate new ones, e.g. \texttt{v :: ('b, 'c) val},
+as the lemma might be too general at this point.
+
+
+\subsubsection{Adjustments in the C\# Proofgen Module}
+
+Of course, the proof generation module in C\# also needed adjustments.
+Luckily, many map cases were explicitely marked as not implemented in the source code,
+and in many cases it was straightforward, what their implementation should be.
+
+One more difficult case was, that the map type constructors used the same mechanism as the abstract value type constructors,
+since both are modeled as uninterpreted functions in the SMT encoding,
+when using polymorphic type encoding.
+So we had to introduce a special case, depending on if the name of the type constructor started with \texttt{MapType}.
+
+As mentioned in Section~\ref{sec:our-vc-change}, we wanted to weaken one of the map axioms.
+Notably, this change does also change the main Boogie code,
+and not only the additional proof generation module.
+
+Also, since there are now more VC axioms we need to fulfill,
+as described in Section~\ref{sec:vc-map-axioms},
+we need to generate the corresponding proof steps to call our lemmas from the map semantics.
+
+And of course, we also need to change to our new value type \texttt{'a wf\_val},
+everywhere where the old value type was used and in bounded quantifiers.
+And remove the occurences of \texttt{A::absval\_ty\_fun} in the generated definitions and proofs.
+
+%- (global lemmas for better automatic proof tactic)
+%- (some renames due to locale/context)
+
+\subsubsection{More changes}
+
+\begin{verbatim}
+- automatic proof tactics for maps
+- NonEmptyTypes!?
+\end{verbatim}
+
+
+\subsection{Alternative Approaches}
+
+
+\begin{verbatim}
+  - heap/context model
+  - HOAS? (not tried really)
+  - deeper embedding (lambda calculus)
+  - more dependent program semantics + typedecl
+  - quotient types
+  - (see my notes in Logseq)
+\end{verbatim}
+
 \section{Evaluation}
+\begin{verbatim}
+  - custom tests
+  - newly supported boogie tests
+  - dafny tests?
+  - old tests?
+\end{verbatim}
 
 \section{Future Work}
+
+\begin{verbatim}
+imrprovements/limitations
+- convenient map-select syntax
+- mutli-arity map
+- simplify map semantics and proves -> preparation for extending more levels
+- more automatic prove tactics
+- extend type safety proofs for maps
+
+extensions
+- lambda support
+- other typeencoding: primaraley monomorphic
+- free implementation
+
+alternatives
+- other logic/proof assistants?
+- quotient types
+- B3?
+
+\end{verbatim}
 
 \section{Conclusion/Summary}
 
