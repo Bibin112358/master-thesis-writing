@@ -216,11 +216,104 @@ as outlined in our goals (\ref{sec:goals-to-support}).
 \subsection{Methodology}
 \subsection{Changes}
 \subsubsection{Normal changes}
-\subsubsection{SMT change}
 \subsubsection{CLI change}
+\subsubsection{SMT change and proof fix}
 
-\section{Why did we choose Boogie Maps}
+
+\section{Selecting Feature to Support}
 \label{sec:unsupported-usage}
+
+The prceeding work layed extensive fundamental work in supporting a subset of Boogie programs.
+The question now is, how to enlargen this subset. i.e. which unsupported feature to select
+to extend the proof generation.
+
+\paragraph{Preceeding Work.} Section 3.1 and Section 9 of the preceeding work \cite{parthasarathy2021formally} already hints,
+that Boogie maps are the main feature not supported yet.
+It also mentiones other open challenges, such as bitvectors, procedure calls.
+While this already give us some motivation, in addition of maps being a interesting feature to explore,
+we wanted to do some more analysis to confirm their usefulness.
+Additionally, the analysis also give us what map feature might be more important or used,
+as we do not expect to fully support Boogie maps in all its glory.
+
+\subsection{List of unsupported features}
+
+\paragraph{Subsetchecker and Source Code.} Before deciding on which feature to choose,
+we need to want a list of unsupported from which we choose the feature we want to work on.
+To find more unsupported feature, we looked at the source code of the proof generation module.
+Fortunately, there exists a subset checker, that looks for any unsupported feature,
+before attempting proof generation.
+From that function we gathered the following limitations
+\begin{itemize}
+  \item procedure type parameters
+  \item free pre- and postconditions
+  \item where clauses
+  \item node.isFloat || node.IsBv || node.IsString || node.IsRMode || node.IsRegEx
+  \item bitvectors
+  \item maps
+  \item CodeExpr
+  \item concurrent intermediate verification language (CIVL) features
+\end{itemize}
+
+Another source is not look at \texttt{NotImplementedException} and \texttt{NotSupportedException}
+in the code of the proof generation:
+\begin{itemize}
+  \item f
+\end{itemize}
+\begin{verbatim}
+  generall NotImplemented or NotSupportedException things in source code (Do I even know what these do?)
+  - TypeEncoding not in [Predicate, Monomorphic]
+  - non DeclFreeProverContext
+  - Proof generation does not support this case: incarnation on lhs of assignment
+  - cachich verification results
+\end{verbatim}
+
+not explaining every feature
+
+\subsection{Evaluating Feautures}
+
+\begin{verbatim}
+
+testing with dafny test cases
+- gathering tests (2000 tests)
+- adjust checker, write script to run all tests
+  - script `BoogieDriver $b | sort | uniq'
+  - `check.sh | sort | uniq -c | sort -nr`
+- all use map
+- run a simple test -> generates large boogie program
+- maps still most used missing feature
+- analyze simple case in which way
+- example
+- conclusion: no polymorphism, nested, abstract types, axioms quantifiying (so infinite), ...
+
+
+boogie tests
+- 726 tests
+- most failed feature: [int]int map with 94 tests using it
+- most non-map failures
+  - free requires clause with 25 tests
+  - Float 22
+  - Bitvectors 17
+  - others appear in less than 15 test cases
+\end{verbatim}
+
+\subsection{Chosen Feature}
+
+map and its restrictions
+
+note
+- viper uses polymorphic maps
+- dafny does not use it anymore
+
+\subsection{Caveats}
+
+\begin{verbatim}
+caveat
+- simple already contains our answer
+- only collected features from subsetchecker
+- checked everything (even the ones that do not verify)
+
+\end{verbatim}
+
 
 \section{Supporting Boogie Maps}
 \label{sec:support-boogie-maps}
@@ -1656,7 +1749,14 @@ Addressing these unsupported features is the necessary next step toward achievin
 
 \section{Conclusion}
 % Conclusion/Summary
-
+\begin{verbatim}
+  - update Boogie proof generation to neweste boogie
+  - identified maps as a main missing feature
+  - came up and implemented a semantic supporting a practical subset of boogie maps
+  - minimal change to VC
+  - prototype working for few examples
+  - possible to shallow embedd Boogie maps to Isabelle functions and typedef
+\end{verbatim}
 
 \section*{Bibliography}
 \bibliographystyle{plain}
