@@ -1437,7 +1437,6 @@ This depth must be determined in advance so that we can appropriately define the
 Consequently, different input programs may yield distinct instantiations of the semantics.
 A notable characteristic of this approach is that the value semantics inherently become program-dependent.
 
-
 \subsubsection{Single-Arity Maps}
 Boogie allows maps to take multiple keys (see Section~\ref{sec:semantics-boogie-maps}).
 Our semantics, and therefore the proof generation, are currently limited to a single key.
@@ -1452,26 +1451,23 @@ Using the well-formed type definition and inductive structure described in Secti
 it should be possible to natively support multi-arity maps.
 This would require changing the domain representation to a list of types,
 while \texttt{FunL} would take a list of values as its domain.
-The crucial adjustment in \texttt{wf\_L} would be ensuring that \emph{all} domain types have levels at most $n-1$,
+The crucial adjustment in \texttt{wf\_L} would be ensuring that \emph{all} domain types have levels of at most $n-1$,
 and that \emph{at least one} domain type has a level of exactly $n-1$.
 This extension should still satisfy our desired properties.
 Alternatively, if this structural change proves unviable,
 multi-arity maps can be handled via an automatic front-end transformation to single-arity maps,
 essentially treating the multi-key syntax as syntactic sugar.
 
-
 \subsubsection{No Map Assign Statement}
 We currently omit support for Boogie's convenient map assignment syntax (e.g., \texttt{M[x, y] := 1}), as discussed in Section~\ref{sec:semantics-boogie-maps}.
 While this could be resolved via front-end desugaring into standard store operations,
 extending the formal semantics to handle it natively would provide stronger correctness guarantees.
-
 
 \subsubsection{Type Helper for Maps}
 Certain components of the foundational Boogie semantics manage type inference and type safety.
 These components must be explicitly extended to accommodate map cases.
 Once this infrastructure is complete, the corresponding map cases can be implemented within the \texttt{ML} proof tactics that handle types.
 This enhancement would allow a strictly larger subset of generated proofs to successfully verify.
-
 
 \subsubsection{Current Automatic Proof Tactic Strength}
 Currently, there is only rudimentary support for maps within the automated proof tactics.
@@ -1489,55 +1485,48 @@ is necessary to increase the verification success rate of generated proofs.
 
 \subsection{Alternative Approaches}
 
-We want to shed some light to possible other apporaches, we were considering.
+During the design phase, several alternative approaches were considered to address the complexities of modeling Boogie maps. We briefly outline these alternatives and the rationale behind our ultimate design choices.
 
-% HOAS? (not tried really)
-  
-\subsubsection{Semantics based on typed used in input program}
+\subsubsection{Semantics Based on Types Used in the Input Program}
 
-We had the idea, of collecting all types in the input Boogie program,
-and using this information to create a datatype for map type used in the input program.
-For example, if we have a \texttt{[int]int} map, we would model is as an \texttt{int => int} function in Isabelle.
-This stands in contrast to our current approach of modelling it as a \texttt{'a val0 => 'a val0} function,
-between all primitive values and enforcing type safety with an well formedness invariant.
-One issue we had with this, was that we had no type to represent abstract types.
-Later, we found that we could potentially use Isabelle's \texttt{typedecl} to create a type for these abstract types,
-and use these to represent the domain and codomain of our maps.
+One initial idea involved collecting all types utilized within the input Boogie program
+and using this information to generate custom datatypes specific to the program's map types.
+For example, if a Boogie program used an \texttt{[int]int} map, we would model it directly as an \texttt{int => int} function in Isabelle.
+This stands in contrast to our current approach, which uniformly models all map levels using \texttt{'a val0 => 'a val0} functions
+(operating over all primitive values) and enforces type safety via a well-formedness invariant.
 
-The advantage of this approach is that is necessitates much of the need for the well formedness definition.
-The disadvantage is, that one would need to collect all types, and instantiate the map semantics,
-with all the used map types, and define select and store with all the possible type combinations.
-It is not clear, which approach would lead to a better semantics.
+A significant hurdle with this approach was the representation of abstract types.
+We later realized that Isabelle's \texttt{typedecl} command could potentially create types corresponding to these abstract types,
+which could then be used to represent the domains and codomains of our maps.
 
+The primary advantage of this approach is that it largely eliminates the need for complex well-formedness definitions.
+The disadvantage, however, is the extensive overhead: one would need to statically extract all types, instantiate the map semantics for every observed type, and define polymorphic select and store operations for all possible type combinations. It remains an open question whether the complexity of generating these bespoke semantics outweighs the complexity of our unified, invariant-based approach.
 
-\subsubsection{Context/Heap model}
+\subsubsection{Context/Heap Model}
 
-One early idea was to have a separate structure, that contains all maps
-and use an identifier to access it: \texttt{maps :: int => val => val"}.
-The map then stores the identifier \texttt{MapV int}.
-This structure would then have to be passed around everywhere and updated accordingly.
-We decided not to use that, as it creates a thing we have to pass around everywhere,
-and that is updated during the process.
-We also expect the reasoning to be harder, as we are essentially introducing a heap to store our maps.
-The question is also, which identifier should be used, and if integers even are an appropriate identifier, especially if we want to quantify over all maps.
-We also expect that the notion of equality and estensionality will not be easy with such a model.
-This model seems to be good for implementing a runtime, but not for logically modelling.
+Another early concept was to maintain a separate global structure (a "heap") containing all maps,
+accessed via a unique identifier (e.g., \texttt{maps :: int => val => val}).
+Under this model, a map value would merely store a reference, such as \texttt{MapV int}.
+This structure would have to be passed throughout the semantics and updated upon every map modification.
 
+We discarded this approach because it introduces stateful complexity to the semantic model.
+Reasoning about a heap structure introduces significant verification overhead.
+Furthermore, determining the appropriate identifier format, and deciding if integers are suitable for quantifying over the infinite space of potential maps, posed a conceptual challenge.
+Finally, establishing extensional equality between maps within a heap model is notably difficult.
+While a context/heap model is excellent for implementing a runtime execution engine, it is poorly suited for a foundational logical model.
 
 \subsubsection{Quotient Types}
 
-We often had issues with our map datatype being able to represent more things than their Boogie counter-part.
-Either being able to define bogous values, such as maps that are not type safe,
-or having multiple representation for the same Boogie map.
-That is the motivation behind our well formedness definition \ref{sec:wf-definition}.
-Another potential avenue to explore are quotient types.
-They allow to define a new type, while having 'multiple' representation of the same value under the hood.
-Due to lack of time and insufficient Isabelle knwoledge, we did not explore this,
-but this might be a promising avenue to simplify map semantics in the future.
-Especially, with potentially allowing an association list, to model a list of updates,
-while having a function to fall back on.
-And using quotienting to enable extensionality between maps, that were built differently,
-but behave the same.
+A recurring issue was that our map datatypes were overly permissive, capable of representing values that have no valid Boogie counterpart
+(e.g., non-type-safe maps or multiple representations of the same extensional Boogie map).
+This motivated our rigorous well-formedness definition (Section~\ref{sec:wf-definition}).
+
+Another potential avenue to enforce extensionality natively is the use of quotient types. % TODO ref
+Quotient types allow the definition of a new type by abstracting over multiple underlying representations using an equivalence relation.
+Due to time constraints and the advanced Isabelle expertise required, we did not pursue this direction.
+However, it represents a highly promising avenue for simplifying map semantics in the future.
+For instance, one could model a map as an association list of updates with a fallback function,
+and use quotienting to prove extensional equality between maps that were constructed differently but behave identically:
 
 \begin{verbatim}
     var a: [int]int;
@@ -1549,63 +1538,52 @@ but behave the same.
     assert a == b;
 \end{verbatim}
 
+\subsubsection{Deep Embedding via Lambda Calculus}
 
-\subsubsection{Lambda Calculus Deep Embedding}
+The most theoretically robust alternative is a deep embedding.
+Our chosen solution is a shallow embedding, mapping Boogie maps directly to preexisting Isabelle functions.
+Conversely, a deep embedding would model Boogie maps as expressions featuring explicit variable bindings.
+Boogie maps closely mirror the lambda calculus:
+Map selection (\texttt{m[k]}) corresponds to function application (\texttt{m k}),
+map storage (\texttt{m[k := v]}) corresponds to functional update (\texttt{$\lambda$x. if x = k then v else m x}),
+and lambda expressions map directly to $\lambda$-abstractions.
+With the inclusion of polymorphic map types (Section~\ref{sec:semantics-boogie-maps}), the type system closely resembles System F. % TODO ref
+Therefore, the formal semantics of Boogie maps could be explicitly formalized as an implementation of System F.
 
-The most promising alternative approach is deeper embedding.
-Our solution is a shallow embedding of Boogie maps to preexisting implementation of Isabelle functions.
-Another approach would be to store not a mathematical function, but a Boogie expression with a variable binding.
-Boogie maps seem to closely resembel lambda calculus.
-Map select \texttt{m[k]} would correspond to function application \texttt{m k},
-map store \texttt{m[k := v]} to function update \texttt{$\lambda$ x. if x = k then y else m x}
-and lambda expressions to function $\lambda$-abastractions.
-And with polymorphic map type \ref{sec:semantics-boogie-maps}, the type system would resembel System F. % TODO ref
-That means we can potentially design the formal semantic of Boogie maps as a formalization of System F.
+This approach requires rigorously managing variables, environments, and De Bruijn indices or nominal bindings.
+This significant conceptual overhead is why we initially pursued the simpler shallow embedding.
+However, to formalize advanced features such as unbounded nesting and impredicative polymorphism, a deep embedding may ultimately be necessary.
 
-This would entail dealing with variable and binders.
-This is also the main reason, why we first went with the simpler shallow approach of embedding directly to Isabelle functions, as having expressions as values and variable binders
-sound like a lot of changes to the existing semantics.
-For formalizing the more advanced features of maps, like unbounded nestings and polymorphism,
-this might have to be the approach.
-For our simpler use case, our semantics should be easier.
+A valid theoretical question is why a deep embedding avoids the paradoxes of Cantor's Theorem (Section~\ref{sec:cantor}).
+The resolution lies in the fact that a deep embedding does not represent \emph{every} possible mathematical function in the HOL universe,
+but only those computable functions expressible within the Boogie syntax.
+For example, while the mathematical set of all integer functions (\texttt{[int]bool}) is uncountable,
+the set of functions constructible by a finite Boogie program is strictly countable.
+\footnote{This assumes standard computable types. The inclusion of uncomputable reals could potentially complicate this, but within the bounds of a program, the expressible space remains constrained.}
+By restricting the semantics to expressible functions, we bypass the cardinality paradoxes inherent in mapping full HOL function spaces to themselves.
 
-One question is why such deep embedding would not cause issues with Cantor's Theorem \ref{sec:cantor}.
-The reason is, with the deep embedding we are not representing every possible mathematical function,
-but only the functions expressible in Boogie.
-For example $[int]bool$, could be used to represent a set of integers in Boogie.
-The cardinality of all sets of integeres is uncountable.
-But we all sets of integers that we can represent and produce in finite amount of time are countable.
-\footnote{Or at least not larger than the types available. Using reals one can potentially express uncountable functions.}
-So if we define our semantic such that $[int]bool$ only represents the representable functions,
-this would not cause the same cardinality issues as with mathematical functions in Isabelle.
+\subsubsection{Alternative Logic Frameworks and Proof Assistants}
 
+Given these challenges, one might ask whether Isabelle/HOL is the appropriate tool for defining map semantics.
+Because the extensive preceding work was built upon Isabelle/HOL, we elected to continue within this ecosystem.
 
-\subsubsection{Other Logic or Interactive Proof Assistants}
-
-One question we asked ourselve, is Isabelle/HOL the right tool to define map semantics?
-Since the extensive previous work was build on Isabelle/HOL, we decided to continue with it.
-If we extends our map semantics to adjust the amount of supported nesting levels on the input program,
-then our datatype becomes dependent on the number of nesting levels.
-This sounds like we would want depedent types %TODO ref
-which might help define this more cleanly.
-Another part where dependent types might be useful for out well formed type definition.
-This is basically a contrained type, we build from a set.
-And this is dependent on our inductive definition.
-Maybe using dependent types, the whole well formedness thing might not be necessary,
-as one might restrict our function using the Boogie types, which are represented as values in  our Isabelle formalization.
-
+However, if we wish to adjust the map semantics dynamically based on the nesting depth of the input program,
+our datatype inherently depends on a numerical value.
+This scenario strongly suggests the use of Dependent Types. %TODO ref
+A dependently typed language (such as Coq, Lean, or Agda) could potentially define this hierarchy more elegantly.
+Dependent types might also alleviate the need for our complex well-formedness predicates,
+as constraints could be baked directly into the type signatures corresponding to the Boogie values.
 
 \subsubsection{New Boogie Language: B3}
 
-There seems to be work by the dafny developers for a new intermediate verification language: B3 \footnote{https://github.com/dafny-lang/b3}.
-The question is, if this might superceed the current Boogie IVL,
-does it make sense to shift focus on bulding foundational verification tools for that?
-It seems still quite new, and judging from the commits Boogie IVL is more active,
-but it seems worth to keep an eye on. 
+The Dafny development team is currently working on a new intermediate verification language: B3.\footnote{https://github.com/dafny-lang/b3}
+If B3 ultimately supersedes the current Boogie IVL,
+it raises the question of whether research efforts should pivot toward building foundational verification tools for this new ecosystem.
+While B3 is still in its infancy, and the legacy Boogie IVL repository remains highly active,
+it is an important development to monitor for future formalization projects.
 
 
 \subsection{Future Work}
-
 
 \subsubsection{Lambda Expressions}
 
@@ -1617,6 +1595,7 @@ and subsequently converting it into a valid, well-formed map value.
 The primary challenge lies in formally proving that the resulting transformation satisfies all desired well-formedness properties,
 while ensuring the intended functional behavior is accurately captured.
 We have manually demonstrated the well-formedness of two specific lambda functions:
+
 \begin{verbatim}
   (lambda x : int :: x + 1) : [int]int
   (lambda f : [int]int :: (lambda x : int :: f[x] + 1) ) : [[int]int][int]int
@@ -1626,8 +1605,8 @@ Demonstrating the well-formedness of these examples highlights the complexity of
 Future implementations must devise a method to simplify this process and automate both the generation and the corresponding proofs.
 This represents a highly promising avenue for future work.
 
-
 \subsubsection{Polymorphic Map Types}
+
 Arguably, the most complex feature of Boogie maps is their support for polymorphic types (see Section~\ref{sec:semantics-boogie-maps}),
 and the resulting impredicative polymorphism and recursive types.
 It even permits the assignment of polymorphic lambdas.
@@ -1639,43 +1618,40 @@ Supporting such maps would require an entirely different semantic approach.
 However, as noted in preceding work, such pathological use cases rarely appear in practice,
 suggesting that one might safely restrict the generality of map semantics to accommodate standard, practical verification tasks.
 
-
 \subsubsection{Monomorphic Type Encoding}
+
 The entire proof generation module currently relies on Boogie's polymorphic type encoding.
 At the time of the preceding work, this was the default encoding;
 however, the default has since switched to monomorphic type encoding.
 Adapting the proof generation to support monomorphic type encoding could significantly benefit map semantics.
-The monomorphic encoding utilizes more restrictive SMT Array Theory axioms in the verification conditions % TODO ref.
+The monomorphic encoding utilizes more restrictive SMT Array Theory axioms in the verification conditions. % TODO ref.
 Leveraging these restrictions could facilitate a simpler formulation of the map semantics, potentially enabling more general map behaviors.
 
+\subsubsection{Addressing Current Limitations}
 
-\subsubsection{Improve current Limitations}
-Clearly, one potential work for the future is to improve the current limitations of our implementation \ref{sec:limitations}.
-Meaning, supporting multi-arity maps, the convenient map assign syntax, showing type safety lemmas for maps
-and strengthening proof tactics to enable more automatic proof verifications.
+A natural direction for future work is addressing the limitations outlined in Section~\ref{sec:limitations}.
+This includes natively supporting multi-arity maps, implementing the convenient map assignment syntax,
+formally verifying map-related type safety lemmas,
+and strengthening the \texttt{ML} proof tactics to enable a higher rate of automated proof verification.
 
+\subsubsection{Extending Map Nesting Levels}
 
-\subsubsection{Map Nesting Levels}
-Our solution supports map witt up to three levels of nestings in the domain types.
-There is no limit for nesting range types, as we can safely recurse on them, see Section~\ref{sec:cantor}.
-Nesting domains seems to be quite rare on the examples we found, so this serves a practical limit.
-But of course a more general semantics is desirable, so extending our approach to support an bounded,
-or even unbounded, number of nestings is nice.
-One way to approach it would be to figure out the nesting level needed for the input program,
-and then automatically generate the map semantics, its definitions and proofs accordingly.
-Even better would be to see, if one can define the semantic, that works in any cases,
-without having to generate the semantics based on the input, dropping the program-dependent semantics property.
+Our solution currently supports maps with up to three levels of nesting in their domain types.
+There is no theoretical limit for nesting range (codomain) types, as recursion on the codomain is logically safe (see Section~\ref{sec:cantor}).
+Because deeply nested domains are rare in practical benchmarks, a three-level limit serves as a highly practical bound.
+Nevertheless, a fully generalized semantics is desirable.
+Extending our approach to support an arbitrarily large, bounded (or even unbounded) number of nesting levels is a clear next step.
+One approach is to programmatically determine the required nesting level from the input program
+and dynamically generate the corresponding Isabelle semantics, definitions, and proofs.
+An even more robust solution would involve defining a single semantic framework capable of handling arbitrary depths without relying on program-dependent generation.
 
+\subsubsection{Supporting Additional Boogie Features}
 
-\subsubsection{Support other Boogie Features}
-One of the motivation listed in Section~\ref{sec:motivation} is to eventually support Dafny program,
-or in general to enable a pipeline of foundational verifiers.
-We fixed the most prominent limitation on that way, but there are still hurdles,
-stopping us from verifying even the simplest Dafny program.
-Currently, the proof generation fails, since it does not support procedures marked with \texttt{free} postconditions.
-Ignoring that, there are still some value conversion functions not implemented yet,
-for example a real to int function.
-Supporting these next, would bring us closer to being able to foundationally verify Dafny programs.
+A primary motivation for this work (Section~\ref{sec:motivation}) is to enable a foundational verification pipeline capable of processing Dafny programs.
+While we resolved a significant hurdle by formalizing map semantics, other unsupported Boogie features currently prevent the verification of even simple Dafny examples.
+For instance, the proof generation module currently fails when encountering procedures marked with \texttt{free} postconditions.
+Furthermore, several value conversion functions (e.g., converting a \texttt{real} to an \texttt{int}) remain unimplemented.
+Addressing these unsupported features is the necessary next step toward achieving fully foundational verification for Dafny programs.
 
 
 \section{Conclusion}
