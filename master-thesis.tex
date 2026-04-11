@@ -196,6 +196,7 @@ as outlined in our goals (\ref{sec:goals-to-support}).
 
 % [TODO ref Boogie manual]\
 % [TODO ref git issue claiming outdated manual]
+https://ethz.ch/content/dam/ethz/special-interest/infk/chair-program-method/pm/documents/Education/Courses/SS2017/Program%20Verification/08-Boogie.pdf
 
 \subsection{Type Encoding \& Extensionality [TODO]}
 % TODO move to introduction too?
@@ -207,6 +208,8 @@ as outlined in our goals (\ref{sec:goals-to-support}).
   - to use polymorphic: use \texttt{typeencoding:p} flag and include a polymorphic function [TODO example]
   - type encoding has a huge effect on VC axioms for maps
   - the semantics is claimed to be non-extensional, but it uses monomorphic encoding and SMT arrays (default)
+
+  https://github.com/boogie-org/boogie/discussions/769
 \end{verbatim}
 
 % \subsubsection{Select [Early Notes]}
@@ -216,14 +219,187 @@ as outlined in our goals (\ref{sec:goals-to-support}).
 
 % [TODO explain Boogie select semantics informally according to the outdated manual]
 
+\subsection{SMT Array}
+
+\begin{verbatim}
+  
+- TODO [[Master Thesis/Map]] encoding in [[Master Thesis/Isabelle]] [[Master Thesis/Map Encoding]]
+  id:: 692daf31-ce62-4d99-b963-50b1bbdddb1b
+	- solve issue with with custom select?
+	- [[Master Thesis/SMT]] encoding
+		- `res: [int, [int] int ][int] int` to `(declare-fun res () (Array Int (Array Int Int) (Array Int Int)))`
+		- with `select` and `store` functions
+	- [[Master Thesis/SMT]] Array
+		- Resources
+			- https://www.philipzucker.com/z3-rise4fun/guide.html
+				- nicer rendering: https://microsoft.github.io/z3guide/docs/theories/Arrays/
+			- https://theory.stanford.edu/~nikolaj/programmingz3.html#sec-arrays
+		- they seem like dictionaries or maps (potentially unbounded?)
+		- they seem to be modelled as functions
+		- DONE important difference to [[Master Thesis/Boogie]] Maps: Arrays are *extensional*
+			- are equal if they behave the same on all selected indices
+			- but why are boogie maps not extensional when Arrays are?
+				- DONE why does this fail? https://ethz.ch/content/dam/ethz/special-interest/infk/chair-program-method/pm/documents/Education/Courses/SS2017/Program%20Verification/08-Boogie.pdf
+					- it actually verifies
+			- different behaviour with `/useArrayAxioms`
+			- is this an issue for $valid(SMT) \implies ver(BPL)$ ?
+				- not if we make our Boogie semantics stronger (i.e. guarantee extensionality)
+\end{verbatim}
+
 
 \section{Upgrading Boogie}
-\subsection{State before}
-\subsection{Methodology}
+
+Frist contribution we do is updating the Boogie version in the proofgen repository.
+The last commit from Boogie in this repository was 4th Feb 2022, with Boogie version 2.11.4
+\footnote{https://github.com/viperproject/boogie-proofgen/commit/0b9f14d15b757c2b5e3ca5d9fa84a5830e9c00bf}.
+The newest Boogie version at the time of starting this project was released 7th Aug 2025, version 3.5.5.
+As we can see, there was some time and even a major version jump, so we can expect the Boogie codebase to change a bit.
+
+\subsection{Default Type Encoding Change}
+\label{sec:default-type-encoding}
+
+One change that we already know and is relevant for our use case is
+that the default type encoding changed from polymorphic to monomorphic.
+Polymorphic type encoding is better supported by the proof generation module than monomorphic type encdoing,
+as explained later in Section~\ref{sec:type-encoding}.
+So we have to make sure to always use the polymorphic option \textttt{/typeEncoding:p},
+to ensure the same behavior as with the old version.
+
+
+\subsection{Checking SMT changes}
+
+Before delving right into updating the code, we wanted to first compare, if the SMT encoding changed much.
+As proof generation relies heavily on it, significant changes might break the module.
+So we compared the SMT output of proofgen, Boogie v2.11.4 and Boogie v3.5.5.
+We also compare it with Proofgen, as the module adjust the VC for its purposes.
+[TODO relevant?]
+% mention? disable control flow VC
+We generated the SMT output for all tests in the ProofGenBenchmark folder (rougly 130 tests).
+All the files differed. Looking at a few by hand we can see, that most changes were not significant.
+Most of the files just changed smt-options or their order of, but not the actual VC.
+Theses options are for help deciding satisfiability of the SMT file, so outside our consern.
+For some files there were changes to the VC.
+Mostly regarding polymorphic type axioms like 
+\begin{verbatim}
+  (forall ((x T@U) )  (=> (= (type x) intType) (= (int_2_U (U_2_int x)) x)))
+\end{verbatim}
+which in this case is saying that converting int to a boxed value and back does not change it.
+In the older Boogie versions, these were generated for every type, and in the newer only for the types usde in the input program.
+Boogie also dropped type ordering\footnote{https://github.com/boogie-org/boogie/pull/667/},
+which is nice, since these were also deleted by Proofgen.
+So both changes seemed fine for Proofgen.
+\footnote{Later (Section~\ref{sec:smt-change}) we find, that four test cases actually had a small change, significant for proof genration.
+Since all the files had changes, and the afftected four cases also had the polymorphic type axioms,
+the difference was difficult to spot in advance.}
+
+
+\subsection{Merging Process}
+
+With having seen no relevant change in the SMT encoding, we go on to bring Proofgen and the newest version of Boogie together.
+Since Boogie had a lot of code changes in that time,
+and the fact that proofgen tried to be as little intrusive to the existing code base as possible \cite{parthasarathy2021formally},
+we decided to apply the diff of Proofgen and Boogie v2.11.4 manually to Boogie v3.5.5.
+The diff we generated contained less then 700 lines of changes across 15 files,
+while the diff between v2.11.4 and v.3.5.5 changed 300 files.
+Thus we forked the official Boogie repository, and made a new branch based of v3.5.5.
+We then manually ported the code file by file, until every change from Proofgen was ported and compiling.
+% TODO? mention periodic checking of smt changes
+
+
+\subsection{Preserving Git History}
+
+One problem with this approach would be the loss of the git history of Proofgen,
+since we \emph{wrote} the code now.
+We mitigated this with the following process.
+We first fork the Proofgen repository and make a new branch there.
+Then we add our forked repository from before as a new remote, fetch it and start merging it into the current branch.
+This merge now included all the changes from v3.5.5, as we based our original fork from it.
+This also keeps the Proofgen history, as it was there before.
+After resolving some conflicts, we checked and it had the desired effect.
+The history from Boogie and Proofgen is mostly preserved, and only our necessary changes,
+like renaming and moving code, are attributed to us in the history.
+
+
 \subsection{Changes}
-\subsubsection{Normal changes}
+
+Let's discuss what kind of changes were necessary to sucessfully merge the code.
+
+
+\subsubsection{Refactoring Changes}
+
+Many of the changes are what one can expect over time.
+There were a few renamings to be done, like \texttt{if.thn} to \texttt{if.Thn},
+as fields were privatized and made accesible through public C\# properties
+\footnote{https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/classes-and-structs/properties}.
+Files, methods and lines of code got moved around, split or merged,
+meaning the Proofgen modification had to be moved the same way.
+Some interface were changed and proofgen code had to be adjusted accordingly,
+and some util function became obsolete.
+Typical stuff one expects from a software upkeeping perspective.
+
+
 \subsubsection{CLI change}
+
+One bigger and more ivolving change was the removal of the static command line options variable.
+Before there existed a static accessible variable \texttt{CommandLineOptions.Clo},
+from which one could access user define option passed through the command line arguments.
+\footnote{https://github.com/boogie-org/boogie/pull/501}.
+We took their recommended approach to introduce our own static variable, similar how Dafny did it
+\footnote{https://github.com/dafny-lang/dafny/pull/1866},
+although the made it non-static later on
+\footnote{https://github.com/dafny-lang/dafny/pull/3663}.
+This would require more significant code changes,
+so we decided to leave it as future work.
+
+
 \subsubsection{SMT change and proof fix}
+\label{sec:smt-change}
+
+After fixing all errors we ran the proof generation on the benchmarks, in the hope that everything that passed before still passes.
+There where 9 failures, from which 5 failures were known failures from before the merge.
+So we had 4 additional tests that were not passing.
+After analyzing the SMT output of one of the failures we saw a difference we did not see before:
+
+% TODO word diff colouring
+% simplify irrelevant details away
+\begin{verbatim}
+forall ((arg0@@11 T@U) (arg1 Int) (arg2 Int) ) 
+  (= (type (q@store arg0@@11 arg1 arg2)) IntMapType)
+
+forall ((arg0@@3 T@U) (arg1 Int) (arg2 Int) ) 
+  (=> (= (type arg0@@3) IntMapType) (= (type (q@store arg0@@3 arg1 arg2)) IntMapType))
+\end{verbatim}
+
+It seems that one of the SMT encoded axioms had changed to include an additional antecedant.
+With the help of \texttt{git bisect} we were able to find the commit and the respective PR
+\footnote{https://github.com/boogie-org/boogie/pull/749} more information.
+
+Now, we had to fix the proof. Fortunately it was not too hard.
+The problem was, that the method for resolving a goal relating to such a SMT axiom was expecting a specific structure.
+And since this structure changed, by adding an antecedant, the rigid proof did not work.
+We applied a more flexible proof method, which seems to have resolved the issue:
+
+\begin{verbatim}
+(* In VCExprHelper.thy *)
+
+method fun_output_axiom uses NonEmptyTypes =
+( (simp add: Let_def),(rule allI)+, (simp split: option.split),
+  (rule conjI), (rule impI), (rule val_of_closed_type_correct[OF NonEmptyTypes]),
+  assumption, rule allI, rule impI
+)
+
+(* changing to *)
+
+method fun_output_axiom uses NonEmptyTypes =
+( (auto simp add: Let_def split: option.split
+  intro: val_of_closed_type_correct[OF NonEmptyTypes]) )
+\end{verbatim}
+
+We also checked, if this method was used in other proofs
+\footnote{\texttt{grep "fun\_output\_axiom" proofs_dir -r}},
+and only the failing proofs where calling this Isabelle method.
+With that fix, the four additional tests were passing too.
+So we have sucesfully upgraded the proof generation module from Boogie v2.11.4 to v3.5.5.
 
 
 \section{Selecting Feature to Support}
@@ -454,6 +630,20 @@ Looking at dafny test folder in the Boogie repository \footnote{https://github.c
 it seems that is used polymorphic maps to in the past, but ditched them.
 % TODO ref Dafny update moving away from poylmorphic
 
+\begin{verbatim}
+
+- [[Master Thesis/Proofgen/Not Supported]]
+	- `bash boogie-experiments/run-proofgen-supported-check.sh | sort | uniq -c | sort -nr > boogie-tests-statistics-file.txt`
+	- use `onlyCheckProofGenSupport` or `dontStoreProofGenFiles`?
+	- Viper uses Polymorphic maps?
+		- `type HeapType = <A, B> [Ref, Field A B]B;`
+	- old Dafny used Polymorphic maps? (see `boogie/Tests`)
+		- `type Heap = [ref]<alpha>[Field alpha]alpha;`
+		- [Make the Boogie representation of the Dafny heap use only Box #4020](https://github.com/dafny-lang/dafny/pull/4020)
+		- [Monomorphic Field and collection types #4597](https://github.com/dafny-lang/dafny/pull/4597)
+	- Upcoming changes to Boogie: https://github.com/dafny-lang/dafny/issues/4005
+\end{verbatim}
+
 
 
 \subsection{Goals to Support [TODO: combine with prev section]}
@@ -500,6 +690,7 @@ our map semantics must satisfy the \emph{map axioms} of the VC generated by Boog
 
 
 \subsection{Polymorphic Type Encoding}
+\label{sec:type-encoding}
 
 
 
@@ -675,6 +866,8 @@ To remain consistent across different type encodings, maintaining extensionality
 % This means ...
 
 
+point of nested maps?
+
 \subsection{Final Requirements}
 Summary needed?
 
@@ -808,6 +1001,12 @@ type_synonym 'a val3210 = "'a val3 + 'a val2 + 'a val1 + 'a val0"
 To integrate these stratified levels into the core semantics,
 we extend the primary \texttt{val} datatype with a generic \texttt{MapV} constructor.
 By utilizing a second type parameter, \texttt{'m}, we decouple the value definition from the specific map implementation:
+
+\begin{verbatim}
+TODO inspired by Gaurav
+https://github.com/viperproject/foundational-boogie/commit/c00254aa736513b3f243aa71182b44043e36c427#diff-6d82a607e399fa940e77790478bb902ad96a9098cd5d0a0a189608ab74f221f2R11
+\end{verbatim}
+
 
 \begin{verbatim}
 datatype ('a, 'm) val = LitV lit | AbsV (the_absv: 'a) | MapV 'm
@@ -1722,6 +1921,11 @@ is necessary to increase the verification success rate of generated proofs.
 
 During the design phase, several alternative approaches were considered to address the complexities of modeling Boogie maps. We briefly outline these alternatives and the rationale behind our ultimate design choices.
 
+\subsubsection{association list / finite map [TODO]}
+
+    (lambda x :: x + 1)
+
+
 \subsubsection{Semantics Based on Types Used in the Input Program}
 
 One initial idea involved collecting all types utilized within the input Boogie program
@@ -1892,6 +2096,11 @@ While we resolved a significant hurdle by formalizing map semantics, other unsup
 For instance, the proof generation module currently fails when encountering procedures marked with \texttt{free} postconditions.
 Furthermore, several value conversion functions (e.g., converting a \texttt{real} to an \texttt{int}) remain unimplemented.
 Addressing these unsupported features is the necessary next step toward achieving fully foundational verification for Dafny programs.
+
+\subsubsection{Improve Proofgen code}
+- new CLI interface
+- reduce intrusion
+
 
 
 \section{Conclusion}
