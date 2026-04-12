@@ -41,40 +41,122 @@ Supervisors: Yushuo Xiao and Prof.~Dr.~Peter M\"uller
 
 \tableofcontents
 
-\section{Introduction}
-\subsection{Background}
-\begin{verbatim}
-  - program verification
-  - translational verifier
-  - Boogie (Dafny, Viper)
-  - formal guarantee about implementation
-  - desired property: VC => correct
-  %- Isabelle? ITP
-\end{verbatim}
 
+\section{Introduction}
+
+\subsection{Translational Program Verifiers}
+
+\paragraph{Program Verification.} Program Verification is the field in Computer Science,
+where one tries to proof that a certain program is \emph{correct}.
+Correct here means that the program its behaviors satsify specified conditions,
+under specified assumptions. % TODO ref
+For example, showing that a sorting algorithms actually produces
+a non-decreasing sequence, with all initial elments contained in the result,
+and no additional elements introduced.
+This can be done paper-proof by hand, but there are increasing efforts to do it on a computer
+and automate the verification process.
+
+\paragraph{Translational Verifiers.} Modern program verifier are translational, in the sense that they take a higher order specification in a language and translate them into a lower language with simpler instructions.
+This works analogously to a compiler. % TODO ref
+For example, where a C++ compiler takes a programm written in C++, translates it into LLVM,
+and finally translates it to x86 assembly.
+
+\paragraph{Boogie.} For verification, one might take a language use in practice, like Python,
+and specify pre- and postconditions.
+Then a tool like Nagini \footnote{https://www.pm.inf.ethz.ch/research/nagini.html}
+takes the instrumented Python program as input to produce a program in Viper
+\footnote{https://www.pm.inf.ethz.ch/research/viper.html}.
+Viper is an intermediate verification language (IVL), which help mitigate the task of building a verification tool for every programming language.
+It does this taking care of taking care of the verification part,
+that might be shared accroas languages.
+Similar how LLVM helps building a compiler, by being a simpler target language than assembly.
+Viper then may
+\footnote{Viper has also another way to verify using symbolic execution}
+be translated into another IVL called Boogie
+\footnote{https://github.com/boogie-org/boogie}.
+This then gets finally translated into a verification condition (VC) in SMT format
+\footnote{https://smt-lib.org/},
+which is a way to represent a mathematical formula.
+This can then be checked by SMT solver like Z3
+\footnote{https://www.microsoft.com/en-us/research/project/z3-3/}.
+Another IVL which translates into Boogie is Dafny \footnote{https://dafny.org/}.
+
+% TODO picture from presentation
 
 
 \subsection{Motivation}
 \label{sec:motivation}
-\begin{verbatim}
-  - full end-to-end: Dafny/Viper -> SMT
-  - needs features outside of supported subset
-  - make Dafny/Viper foundational
-  - more guarantees about Boogie
-\end{verbatim}
+
+
+\paragraph{Formal Guarantees about Translations.} The goal of program verification is to ideally guarantee the correctness of a program.
+For that we need not only verification of the input programs,
+but the tools themeselves.
+While there exists theoretical reasonings why certain approaches to verifiers are correct,
+there are seldom any guarantees about the implementation.
+Ideally, we would have a way to show, that if the output of a translation is verifiable,
+then the input should be as well.
+This is the motivation behind the Viper Roots project
+\footnote{https://www.pm.inf.ethz.ch/research/roots.html}.
+
+
+\paragraph{Prior Work.} There has been prior work in this space
+by Parthasarathy, Gaurav et al.\cite{parthasarathy2021formally}.
+Specifically for the Boogie to SMT part of the pipeline.
+It does this by certifying specific runs of verification,
+generating a computerized proof, that the validity of the SMT output
+implies the correctness of the Boogie input.
+We explain the relevant parts in more detail in Section~\ref{sec:prior-work}.
+
+\paragraph{Extend Supported Subset} The prior work created an imense foundation to certify this translation.
+Unfortunately it only supports a subset of the Boogie language.
+Our goal is to support more features, especially the ones used by other IVL,
+such as Viper and Dafny, to be able to use it in the certification pipeline.
+This and supporting more Boogie programs in general, are the main motivatio for this project.
+
 
 \subsection{Contribution}
-\begin{verbatim}
-  - update codebase
-  - statistics?
-  - map semantics some subset
-  - some automatic proofs
-  - tests/evaluation?
-\end{verbatim}
+
+The project achive the following contributions.
+
+\paragraph{Updating Codebase.} The current state of the prior work is based on an outdated version of Boogie.
+We updated it to use newer version.
+
+\paragraph{Usage of Boogie by Dafny.} We analyzed what what missing Boogie feature Dafny uses,
+to be able to prioritize the next features to support.
+
+\paragraph{Map Semantics.} We were able to design formal semantics for Boogie maps,
+that support a subset of practical subset of use cases.
+
+\paragraph{Proof Generation.} We were able to implement rudimentary proof automation and generations,
+that can certify some Boogie programs using maps.
+This shows the proof of concept of this approach.
+We evaluated this with some custom tests.
+
+
+\subsection{Outline}
+The rest of this report is strucured as follows:
+Section~\ref{sec:background} introduced the relevant parts of the prior work,
+the Boogie IVL language, and other technologies used in this project,
+such as the Interactive Proof Assistant Isabelle/HOL.
+Then in Section~\ref{sec:upgrading-boogie} we show how we updated the codebase and what changed.
+In Section~\ref{sec:unsupported-usage} we show, why we decided to support maps,
+and how we choose which behaviors to support and which to leave for the future.
+Afterwards in Section~\ref{sec:support-boogie-maps} we explain our main contirbution of this project.
+It mainly discusses how we designed the semantics for Boogie maps.
+Then it also sheds some light on how we adjusted the proof generation to have an initial support for the new feature.
+Then we review the project in Section~\ref{sec:discussion}, see what works,
+where the current limits are, what alternative appraoches one may try, and what future work could be done.
+While lastly ending with a conlusion section at Section\ref{sec:conclusion}.
+% TODO appendix?
+
 
 \section{Background}
+\label{sec:background}
+
+  %- Isabelle? ITP
 
 \subsection{Preceding work by Parthasarathy}
+\label{sec:prior-work}
 We build on the approach by Parthasarathy et al.~\cite{parthasarathy2021formally}.
 
 \paragraph{Overall Approach}
@@ -248,6 +330,7 @@ https://ethz.ch/content/dam/ethz/special-interest/infk/chair-program-method/pm/d
 
 
 \section{Upgrading Boogie}
+\label{sec:upgrading-boogie}
 
 The first contribution of this work was updating the Boogie version underlying the proof generation repository.
 The last official Boogie commit merged into this repository was dated February 4th, 2022, corresponding to Boogie version 2.11.4.\footnote{\texttt{https://github.com/viperproject/boogie-proofgen/commit/0b9f14d15b757c2b5e3ca5d9fa84a5830e9c00bf}}
@@ -362,7 +445,7 @@ The existing method in Isabelle responsible for resolving goals related to this 
 Because the structure had changed via the addition of the antecedent, the rigid proof method failed.
 We replaced it with a more flexible proof method, resolving the issue:
 
-\begin{isabellebody}
+\begin{verbatim}
 (* In VCExprHelper.thy *)
 
 (* Old rigid method *)
@@ -376,7 +459,7 @@ method fun_output_axiom uses NonEmptyTypes =
 method fun_output_axiom uses NonEmptyTypes =
 ( (auto simp add: Let_def split: option.split
   intro: val_of_closed_type_correct[OF NonEmptyTypes]) )
-\end{isabellebody}
+\end{verbatim}
 
 We verified the usage of this method across the repository\footnote{\texttt{grep "fun\_output\_axiom" proofs\_dir -r}}
 and confirmed that only the four failing proofs relied upon it.
@@ -1638,6 +1721,7 @@ Expanding these \texttt{ML} tactics remains a promising avenue for future work.
 
 
 \section{Discussion}
+\label{sec:discussion}
 
 \subsection{Evaluation}
 
@@ -2086,6 +2170,7 @@ Addressing these unsupported features is the necessary next step toward achievin
 
 
 \section{Conclusion}
+\label{sec:conclusion}
 % Conclusion/Summary
 \begin{verbatim}
   - update Boogie proof generation to neweste boogie
