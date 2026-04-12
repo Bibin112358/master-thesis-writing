@@ -46,40 +46,34 @@ Supervisors: Yushuo Xiao and Prof.~Dr.~Peter M\"uller
 
 \subsection{Translational Program Verifiers}
 
-\paragraph{Program Verification.} Program Verification is the field in Computer Science,
-where one tries to proof that a certain program is \emph{correct}.
-Correct here means that the program its behaviors satsify specified conditions,
-under specified assumptions. % TODO ref
-For example, showing that a sorting algorithms actually produces
-a non-decreasing sequence, with all initial elments contained in the result,
-and no additional elements introduced.
-This can be done paper-proof by hand, but there are increasing efforts to do it on a computer
-and automate the verification process.
+\paragraph{Program Verification.} Program verification is a field in computer science
+that aims to mathematically prove that a program is \emph{correct}.
+Correctness in this context means that a program's behavior satisfies specified conditions under a set of defined assumptions. % TODO ref
+For example, this involves proving that a sorting algorithm genuinely produces a non-decreasing sequence,
+that all initial elements are contained in the result, and that no additional elements are introduced.
+While this can be done via manual mathematical proofs,
+there are increasing efforts to mechanize and automate the verification process using computers.
 
-\paragraph{Translational Verifiers.} Modern program verifier are translational, in the sense that they take a higher order specification in a language and translate them into a lower language with simpler instructions.
-This works analogously to a compiler. % TODO ref
-For example, where a C++ compiler takes a programm written in C++, translates it into LLVM,
-and finally translates it to x86 assembly.
+\paragraph{Translational Verifiers.} Modern program verifiers are translational, meaning they take a higher-level specification or language
+and translate it into a lower-level language with simpler instructions.
+This process operates analogously to a compiler. % TODO ref
+For instance, just as a C++ compiler takes a program written in C++, translates it into LLVM IR, and finally compiles it into x86 assembly,
+a translational verifier breaks down complex programmatic proofs into simpler logical assertions.
 
-\paragraph{Boogie.} For verification, one might take a language use in practice, like Python,
-and specify pre- and postconditions.
-Then a tool like Nagini \footnote{https://www.pm.inf.ethz.ch/research/nagini.html}
-takes the instrumented Python program as input to produce a program in Viper
-\footnote{https://www.pm.inf.ethz.ch/research/viper.html}.
-Viper is an intermediate verification language (IVL), which help mitigate the task of building a verification tool for every programming language.
-It does this taking care of taking care of the verification part,
-that might be shared accroas languages.
-Similar how LLVM helps building a compiler, by being a simpler target language than assembly.
-Viper then may
-\footnote{Viper has also another way to verify using symbolic execution}
-be translated into another IVL called Boogie
-\footnote{https://github.com/boogie-org/boogie}.
-This then gets finally translated into a verification condition (VC) in SMT format
-\footnote{https://smt-lib.org/},
-which is a way to represent a mathematical formula.
-This can then be checked by SMT solver like Z3
-\footnote{https://www.microsoft.com/en-us/research/project/z3-3/}.
-Another IVL which translates into Boogie is Dafny \footnote{https://dafny.org/}.
+\paragraph{Boogie.} For verification, one might take a practical programming language, such as Python,
+and instrument it with specified pre- and postconditions.
+A tool like Nagini\footnote{https://www.pm.inf.ethz.ch/research/nagini.html}
+can then take the instrumented Python program as input and produce an equivalent program in Viper.
+\footnote{https://www.pm.inf.ethz.ch/research/viper.html} 
+Viper is an Intermediate Verification Language (IVL) that helps mitigate the task of building a custom verification tool
+for every programming language by handling the core verification logic that is shared across languages.
+This is similar to how LLVM simplifies building a compiler by providing a unified target language before assembly. 
+
+Viper programs may then\footnote{Viper also offers an alternative verification backend using symbolic execution.} be translated into another IVL called Boogie\footnote{https://github.com/boogie-org/boogie}.
+These Boogie programs are ultimately translated into Verification Conditions (VCs)
+formulated in the SMT format,\footnote{https://smt-lib.org/}which is a standardized way to represent mathematical formulas.
+These VCs can then be checked by an SMT solver, such as Z3.\footnote{https://www.microsoft.com/en-us/research/project/z3-3/}
+Another prominent IVL that targets Boogie as its backend is Dafny.\footnote{https://dafny.org/}
 
 % TODO picture from presentation
 
@@ -87,66 +81,55 @@ Another IVL which translates into Boogie is Dafny \footnote{https://dafny.org/}.
 \subsection{Motivation}
 \label{sec:motivation}
 
+\paragraph{Formal Guarantees about Translations.} The ultimate goal of program verification is to guarantee the correctness of a program.
+To achieve this, we must verify not only the input programs but also the verification tools themselves.
+While there exist theoretical justifications for why certain verification approaches are sound,
+there are seldom formal guarantees about their actual software implementations.
+Ideally, we want a mechanism to prove that if the output of a translation is verifiable,
+then the input program is guaranteed to be correct as well.
+Providing these foundational guarantees is the primary motivation behind the Viper Roots project.
+\footnote{https://www.pm.inf.ethz.ch/research/roots.html}
 
-\paragraph{Formal Guarantees about Translations.} The goal of program verification is to ideally guarantee the correctness of a program.
-For that we need not only verification of the input programs,
-but the tools themeselves.
-While there exists theoretical reasonings why certain approaches to verifiers are correct,
-there are seldom any guarantees about the implementation.
-Ideally, we would have a way to show, that if the output of a translation is verifiable,
-then the input should be as well.
-This is the motivation behind the Viper Roots project
-\footnote{https://www.pm.inf.ethz.ch/research/roots.html}.
+\paragraph{Prior Work.} There has been significant prior work in this space by Parthasarathy, Gaurav, et al.~\cite{parthasarathy2021formally}, 
+specifically targeting the Boogie-to-SMT segment of the verification pipeline.
+Their approach certifies specific runs of the verifier by generating a machine-checked proof demonstrating that the validity of the SMT output implies the correctness of the Boogie input.
+We explain the relevant components of this architecture in more detail in Section~\ref{sec:prior-work}.
 
-
-\paragraph{Prior Work.} There has been prior work in this space
-by Parthasarathy, Gaurav et al.\cite{parthasarathy2021formally}.
-Specifically for the Boogie to SMT part of the pipeline.
-It does this by certifying specific runs of verification,
-generating a computerized proof, that the validity of the SMT output
-implies the correctness of the Boogie input.
-We explain the relevant parts in more detail in Section~\ref{sec:prior-work}.
-
-\paragraph{Extend Supported Subset} The prior work created an imense foundation to certify this translation.
-Unfortunately it only supports a subset of the Boogie language.
-Our goal is to support more features, especially the ones used by other IVL,
-such as Viper and Dafny, to be able to use it in the certification pipeline.
-This and supporting more Boogie programs in general, are the main motivatio for this project.
+\paragraph{Extending the Supported Subset.} The prior work established an immense foundation for certifying this translation.
+Unfortunately, it currently only supports a restricted subset of the Boogie language.
+Our goal is to extend this support to more complex features,
+especially those heavily utilized by front-end IVLs such as Viper and Dafny,
+so they can be fully integrated into the certification pipeline.
+Expanding the supported subset to cover a broader range of real-world Boogie programs forms the core motivation for this project.
 
 
-\subsection{Contribution}
+\subsection{Contributions}
 
-The project achive the following contributions.
+This project achieves the following contributions:
 
-\paragraph{Updating Codebase.} The current state of the prior work is based on an outdated version of Boogie.
-We updated it to use newer version.
+\paragraph{Updating the Codebase.} The previous iteration of the certification pipeline was based on an outdated version of Boogie.
+We updated the architecture and proof generation module to be compatible with a newer release.
 
-\paragraph{Usage of Boogie by Dafny.} We analyzed what what missing Boogie feature Dafny uses,
-to be able to prioritize the next features to support.
+\paragraph{Usage of Boogie by Dafny.} We analyzed which missing Boogie features Dafny relies on most heavily in order to prioritize the next features for formalization.
 
-\paragraph{Map Semantics.} We were able to design formal semantics for Boogie maps,
-that support a subset of practical subset of use cases.
+\paragraph{Map Semantics.} We designed and implemented formal semantics for Boogie maps that successfully support a practical subset of use cases.
 
-\paragraph{Proof Generation.} We were able to implement rudimentary proof automation and generations,
-that can certify some Boogie programs using maps.
-This shows the proof of concept of this approach.
-We evaluated this with some custom tests.
+\paragraph{Proof Generation.} We implemented rudimentary proof automation and generation capable of certifying Boogie programs that utilize maps. 
+This serves as a successful proof of concept for our approach, which we evaluated against a suite of custom test cases.
 
 
 \subsection{Outline}
-The rest of this report is strucured as follows:
-Section~\ref{sec:background} introduced the relevant parts of the prior work,
-the Boogie IVL language, and other technologies used in this project,
-such as the Interactive Proof Assistant Isabelle/HOL.
-Then in Section~\ref{sec:upgrading-boogie} we show how we updated the codebase and what changed.
-In Section~\ref{sec:unsupported-usage} we show, why we decided to support maps,
-and how we choose which behaviors to support and which to leave for the future.
-Afterwards in Section~\ref{sec:support-boogie-maps} we explain our main contirbution of this project.
-It mainly discusses how we designed the semantics for Boogie maps.
-Then it also sheds some light on how we adjusted the proof generation to have an initial support for the new feature.
-Then we review the project in Section~\ref{sec:discussion}, see what works,
-where the current limits are, what alternative appraoches one may try, and what future work could be done.
-While lastly ending with a conlusion section at Section\ref{sec:conclusion}.
+The remainder of this report is structured as follows: 
+Section~\ref{sec:background} introduces the relevant components of the prior work, the Boogie IVL,
+and other foundational technologies used in this project, such as the Isabelle/HOL interactive theorem prover. 
+Section~\ref{sec:upgrading-boogie} details how we updated the codebase and outlines the necessary architectural changes. 
+In Section~\ref{sec:unsupported-usage}, we justify our decision to formalize Boogie maps and explain how we chose which specific behaviors to support. 
+Section~\ref{sec:support-boogie-maps} presents the main contribution of this project:
+the design of the formal semantics for Boogie maps, alongside an explanation of
+how the proof generation module was adjusted to provide initial support for this feature. 
+Section~\ref{sec:discussion} evaluates the successes of the project,
+discusses current limitations, explores alternative approaches, and outlines avenues for future work. 
+Finally, Section~\ref{sec:conclusion} concludes the thesis.
 % TODO appendix?
 
 
