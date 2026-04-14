@@ -8,6 +8,7 @@
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usetikzlibrary{arrows.meta,positioning,calc}
+\usepackage{arydshln}
 
 % Isabelle Packages
 \usepackage{isabelle}
@@ -48,7 +49,7 @@ Supervisors: Yushuo Xiao and Prof.~Dr.~Peter M\"uller
 
 \subsection{Translational Program Verifiers}
 
-\paragraph{Program Verification.} Program verification is a field in computer science
+Program verification is a field in computer science
 that aims to mathematically prove that a program is \emph{correct}.
 Correctness in this context means that a program's behavior satisfies specified conditions under a set of defined assumptions. % TODO ref
 For example, this involves proving that a sorting algorithm genuinely produces a non-decreasing sequence,
@@ -56,13 +57,13 @@ that all initial elements are contained in the result, and that no additional el
 While this can be done via manual mathematical proofs,
 there are increasing efforts to mechanize and automate the verification process using computers.
 
-\paragraph{Translational Verifiers.} Modern program verifiers are translational, meaning they take a higher-level specification or language
+Modern program verifiers are translational, meaning they take a higher-level specification or language
 and translate it into a lower-level language with simpler instructions.
 This process operates analogously to a compiler. % TODO ref
 For instance, just as a C++ compiler takes a program written in C++, translates it into LLVM IR, and finally compiles it into x86 assembly,
 a translational verifier breaks down complex programmatic proofs into simpler logical assertions.
 
-\paragraph{Boogie.} For verification, one might take a practical programming language, such as Python,
+For verification, one might take a practical programming language, such as Python,
 and instrument it with specified pre- and postconditions.
 A tool like Nagini\footnote{https://www.pm.inf.ethz.ch/research/nagini.html}
 can then take the instrumented Python program as input and produce an equivalent program in Viper.
@@ -77,13 +78,19 @@ formulated in the SMT format,\footnote{https://smt-lib.org/}which is a standardi
 These VCs can then be checked by an SMT solver, such as Z3.\footnote{https://www.microsoft.com/en-us/research/project/z3-3/}
 Another prominent IVL that targets Boogie as its backend is Dafny.\footnote{https://dafny.org/}
 
-% TODO picture from presentation
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.95\textwidth]{uploads/verification-pipeline.png}
+  \caption{Example verification pipeline for translational verifiers. Front-end tools such as Nagini, Prusti, and Gobra translate programs into intermediate verification languages such as Viper and Boogie, while Dafny targets Boogie directly. The resulting verification conditions are then discharged by an SMT solver such as Z3.}
+  \label{fig:verification-pipeline}
+\end{figure}
 
 
 \subsection{Motivation}
 \label{sec:motivation}
 
-\paragraph{Formal Guarantees about Translations.} The ultimate goal of program verification is to guarantee the correctness of a program.
+The ultimate goal of program verification is to guarantee the correctness of a program.
 To achieve this, we must verify not only the input programs but also the verification tools themselves.
 While there exist theoretical justifications for why certain verification approaches are sound,
 there are seldom formal guarantees about their actual software implementations.
@@ -92,12 +99,12 @@ then the input program is guaranteed to be correct as well.
 Providing these foundational guarantees is the primary motivation behind the Viper Roots project.
 \footnote{https://www.pm.inf.ethz.ch/research/roots.html}
 
-\paragraph{Prior Work.} There has been significant prior work in this space by Parthasarathy, Gaurav, et al.~\cite{parthasarathy2021formally}, 
+There has been significant prior work in this space by Parthasarathy, Gaurav, et al.~\cite{parthasarathy2021formally}, 
 specifically targeting the Boogie-to-SMT segment of the verification pipeline.
 Their approach certifies specific runs of the verifier by generating a machine-checked proof demonstrating that the validity of the SMT output implies the correctness of the Boogie input.
 We explain the relevant components of this architecture in more detail in Section~\ref{sec:prior-work}.
 
-\paragraph{Extending the Supported Subset.} The prior work established an immense foundation for certifying this translation.
+The prior work established an immense foundation for certifying this translation.
 Unfortunately, it currently only supports a restricted subset of the Boogie language.
 Our goal is to extend this support to more complex features,
 especially those heavily utilized by front-end IVLs such as Viper and Dafny,
@@ -141,7 +148,6 @@ Finally, Section~\ref{sec:conclusion} concludes the thesis.
 
 \subsection{Boogie Language}
 
-\paragraph{Official Resources}
 An excellent resource for the Boogie language is the paper by K. Rustan M. Leino \cite{leino2008boogie},
 which is officially linked on the Boogie GitHub page.
 \footnote{https://github.com/boogie-org/boogie}
@@ -214,26 +220,18 @@ procedure foo() returns (b: Box)
 }
 \end{verbatim}
 
-\paragraph{Polymorphism}
+
 As seen in the example, the function \texttt{lookup} includes type parameters enclosed in \texttt{<>},
 identifying it as a polymorphic function.
-
-\paragraph{Type Declarations and Abstract Values} 
 Boogie allows users to declare new types using the \texttt{type} syntax.
 We will refer to values of these types as \emph{abstract values}.
 Type declarations may accept type parameters,
 which can be instantiated to construct new types, as demonstrated by the \texttt{Array} example.
-
-\paragraph{Type Synonyms}
 The \texttt{type} keyword can also be used to create type synonyms instead of entirely new types.
-
-\paragraph{Axioms and Quantifiers}
 Boogie allows developers to introduce global assumptions via the \texttt{axiom} keyword.
 This means the verifier assumes the property holds globally and disregards any program executions that violate the axiom.
 Often, these axioms are used in conjunction with quantifiers like \texttt{forall}, 
 enabling the definition of properties that apply to every value of a specified type.
-
-\paragraph{Free Modifiers}
 In the example, the procedure \texttt{positive} is decorated with the attributes \texttt{free ensures}.
 The \texttt{ensures} keyword specifies a post-condition of a procedure or function, 
 meaning the assertion must hold upon exit.
@@ -267,7 +265,7 @@ procedure simple ()
 }
 \end{verbatim}
 
-Using the syntax \texttt{var m:[D] R}, one can declare a map with domain type \texttt{D} and codomain (range) type \texttt{R}.
+Using the syntax \texttt{var m:[D] R}, one can declare a map with domain type \texttt{D} and range type \texttt{R}.
 With a map, developers can select a value at a given key and obtain an updated map by storing a new value at a corresponding key.
 Notably, maps are total and will always return a valid return value for any key with the correct type.
 
@@ -277,7 +275,7 @@ Importantly, it is \textbf{not} analogous to a dictionary or an association list
 
 Boogie supports more complex map types as well.
 Maps can take multiple keys, referred to as multi-arity maps.
-Furthermore, the domain and codomain types can themselves be maps, enabling nested map structures.
+Furthermore, the domain and range types can themselves be maps, enabling nested map structures.
 However, multi-arity maps are generally discouraged according to this documentation,
 \footnote{https://boogie-docs.readthedocs.io/en/latest/LangRef.html\#inconsistent-assumptions}
 as they can be structurally transformed into nested, single-arity maps.
@@ -315,21 +313,18 @@ This is a highly powerful feature. However, fully supporting it lies outside the
 
 \subsection{Prior Work by Parthasarathy}
 \label{sec:prior-work}
-We build upon the prior work established by Parthasarathy et al.~\cite{parthasarathy2021formally}.
 
-\paragraph{Overall Approach} Proving the complete implementation of the Boogie verifier end-to-end would be a monumental task,
+We build upon the prior work established by Parthasarathy et al.~\cite{parthasarathy2021formally}.
+Proving the complete implementation of the Boogie verifier end-to-end would be a monumental task,
 as it is a large, complex, and constantly evolving codebase.
 Therefore, the approach taken by the prior work is to validate individual verification runs instead.
 The goal is to formally prove that the validity of the outputted Verification Condition (VC)
 mathematically implies the correctness of the input program.
-
-\paragraph{Formal Semantics} To achieve this, we must precisely define what it means for a Boogie program to be "correct".
+To achieve this, we must precisely define what it means for a Boogie program to be "correct".
 This requires formal semantics dictating Boogie's exact behavior.
 Because such a formalization did not previously exist,
 the prior work formalized a core subset of Boogie's semantics within the interactive theorem prover Isabelle/HOL.
-
-\paragraph{Proof Generation Module}
-To generate this proof, the preceding work instrumented the codebase of the Boogie verifier.
+To generate this proof, the prior work instrumented the codebase of the Boogie verifier.
 This custom module produces an embedding of both the Boogie program and the VC within Isabelle/HOL.
 It also gathers crucial context during translation to automatically construct the desired proof.
 See Figure~\ref{fig:proofgen-pipeline} for an illustrative diagram of this architecture.
@@ -370,36 +365,9 @@ See Figure~\ref{fig:proofgen-pipeline} for an illustrative diagram of this archi
   \label{fig:proofgen-pipeline}
 \end{figure}
 
-\paragraph{VC Structure}
-\label{sec:vc-structure}
-
-% TODO cite correctly
-Let us examine the overall structure of the Isabelle embedding of the generated VC
-(adapted from the prior work \cite{parthasarathy2021formally}):
-
-\[
-\forall
-\underbrace{\textit{VC quantifiers}}_{\substack{
-  \text{type encoding parameters,}\\
-  \text{functions, variable values}}}
-\mathpunct{.}\;
-\Bigl(
-\underbrace{\textit{VC assumptions}}_{\substack{
-  \text{type encoding,}\\
-  \text{fun./var./prog. axioms}}}
-\Longrightarrow
-\textit{WP}
-\Bigr)
-\]
-
-This structure forms a logical implication:
-a model fulfilling a specific set of assumptions implies a Weakest Precondition (WP).
-This weakest precondition is essential for demonstrating the correctness of the input program.
-Therefore, our formal semantic modeling of Boogie must rigorously satisfy these assumptions,
-providing clear formal targets that the semantics must achieve.
-
 
 \subsection{Type Encoding \& Map Extensionality}
+\label{sec:type-encoding}
 
 Boogie provides three different ways to encode types in polymorphic programs,
 as detailed by the \texttt{boogie /help} command:
@@ -417,7 +385,7 @@ as detailed by the \texttt{boogie /help} command:
 
 Over time, the default setting has changed from predicate to monomorphic type encoding.
 \footnote{https://github.com/boogie-org/boogie/pull/732}
-The preceding work was built when predicate type encoding was the default,
+The prior work was built when predicate type encoding was the default,
 and it functions best under this configuration.
 According to the documentation of the prior work,
 \footnote{https://github.com/viperproject/boogie-proofgen/?tab=readme-ov-file\#supported-subset}
@@ -441,12 +409,13 @@ meaning if for all keys in their domain, the select operation yields the same re
 
 \subsection{Boogie Map VC Predicate Encodings}
 \label{sec:vc-axioms-changes}
+\label{sec:vc-map-axioms}
+\label{sec:vc-structure}
 
-Supporting maps introduces additional functions and axioms to the VC,
-governing map types and behaviors.
-These axioms differ significantly depending on the type encoding used.
-Since the prior work relies on polymorphic type encoding,
-we focus strictly on its specific encoding of maps.
+% TODO cite correctly
+Let us examine the overall structure of the Isabelle embedding of the generated VC
+(adapted from the prior work \cite{parthasarathy2021formally}):
+
 
 \[
 \forall
@@ -466,11 +435,18 @@ we focus strictly on its specific encoding of maps.
 \]
 
 
+This structure forms a logical implication:
+a model fulfilling a specific set of assumptions implies a Weakest Precondition (WP).
+This weakest precondition is essential for demonstrating the correctness of the input program.
+Therefore, our formal semantic modeling of Boogie must rigorously satisfy these assumptions,
+providing clear formal targets that the semantics must achieve.
+Supporting maps introduces additional functions and axioms to the VC,
+governing map types and behaviors.
+These axioms differ significantly depending on the type encoding used.
+Since the prior work relies on polymorphic type encoding,
+we focus strictly on its specific encoding of maps.
+The following represents the map-relevant portions of the VC.
 
-\paragraph{VC Map Axioms} \mbox{}\\
-\label{sec:vc-map-axioms}
-
-This yields the formal goals that our map semantics must satisfy:
 
 \newcommand{\MapType}{\operatorname{MapType}}
 \newcommand{\MapTypeInvK}{\operatorname{MapTypeInv0}}
@@ -479,7 +455,6 @@ This yields the formal goals that our map semantics must satisfy:
 \newcommand{\Store}{\operatorname{MapStore}}
 \newcommand{\type}{\operatorname{type}}
 
-The following represents the map-relevant portions of the VC.
 
 There are the sorts $U$ and $T$, where $U$ represents values, $T$ represents types,
 and a function $\type : U \rightarrow T$ that determines the type of a given value.
@@ -567,7 +542,8 @@ and Lean \cite{de2015lean}\footnote{https://lean-lang.org/}.
 These systems assist in the mechanical construction of mathematical proofs on a computer
 and rigidly verify that the mechanized proofs are logically sound.
 
-\subsubsection{Isabelle/HOL} 
+\subsubsection{Isabelle/HOL}
+\label{sec:isabelle} 
 In contrast to many other ITPs, Isabelle/HOL is not based on dependent type theory.
 Isabelle itself serves as a generic meta-framework used to build specific logical systems.
 Isabelle/HOL is one such implementation, where HOL stands for Higher-Order Logic.
@@ -732,7 +708,7 @@ to ensure the tool exhibits the same behavior as the older version.
 
 Before delving directly into the code update, we first investigated whether the underlying SMT encoding had significantly changed.
 Because proof generation relies heavily on the structure of the SMT output, structural changes to the verification conditions (VC) could break the module.
-We compared the SMT output generated by Boogie v2.11.4 against that of Boogie v3.5.5.% [TODO relevant to compare proofgen?]
+We compared the SMT output generated by Boogie v2.11.4 against that of Boogie v3.5.5.% [relevant to compare proofgen?]
 % mention? disable control flow VC
 
 We generated the SMT output for all tests in the \texttt{ProofGenerationBenchmarks} folder (roughly 130 tests).
@@ -764,7 +740,7 @@ The generated diff contained fewer than 700 lines of changes spread across 15 fi
 whereas the diff between Boogie v2.11.4 and v3.5.5 impacted over 300 files.
 Therefore, we forked the official Boogie repository, created a new branch based on v3.5.5,
 and manually ported the code file by file until every Proofgen modification was successfully integrated and compiling.
-% TODO? mention periodic checking of smt changes
+% mention periodic checking of smt changes?
 
 \subsection{Preserving Git History}
 
@@ -852,11 +828,11 @@ confirming the successful upgrade of the proof generation module from Boogie v2.
 \section{Selecting Feature to Support}
 \label{sec:unsupported-usage}
 
-The prceeding work layed extensive fundamental work in supporting a subset of Boogie programs.
+The prior work layed extensive fundamental work in supporting a subset of Boogie programs.
 The question now is, how to enlargen this subset. i.e. which unsupported feature to select
 to extend the proof generation.
 
-\paragraph{Preceeding Work.} Section 3.1 and Section 9 of the preceeding work \cite{parthasarathy2021formally} already hints,
+\paragraph{Prior Work.} Section 3.1 and Section 9 of the prior work \cite{parthasarathy2021formally} already hints,
 that Boogie maps are the main feature not supported yet.
 It also mentiones other open challenges, such as bitvectors, procedure calls.
 While this already give us some motivation, in addition of maps being a interesting feature to explore,
@@ -883,19 +859,17 @@ From that function we gathered the following limitations
   \item procedure type parameters
   \item free pre- and postconditions
   \item where clauses
-  \item node.isFloat || node.IsBv || node.IsString || node.IsRMode || node.IsRegEx
+  \item Floats, Strings, Rounding Mode, Regular Expressions
   \item bitvectors
   \item maps
-  \item CodeExpr
+  \item Code Expressions
   \item concurrent intermediate verification language (CIVL) features
 \end{itemize}
 
 \paragraph{Exceptions} Another source is to look at \texttt{NotImplementedException} and \texttt{NotSupportedException}
 in the code of the proof generation.
 From this we gather, that it does not support \texttt{arguments} type encoding,
-declaration free prover context, incarnation on lhs of assignment, and caching of verification results.
-
-For brevity we do not explain what all these feature.
+declaration free prover context, incarnation on lhs of assignment, and caching of verification results. For brevity we do not explain what all these feature.
 
 This might not be an exhaustive list of all the missing features,
 but it gives us a reasonable selection to choose from.
@@ -927,16 +901,24 @@ For that we first take all the integration tests from the official Dafny repo\fo
 This resultet in 2002 tests.
 Then we run our little counting tool described above.
 This is our result, ignoring 11 errors (mostly parsing errors):
-% TODO make table?
-\begin{verbatim}
-   2191 | Maps | VisitMapType | 
-   1776 | Maps | VisitLambdaExpr | 
-   1531 | free requires |
-   1312 | where clauses |
-    134 | Bitvectors | VisitBvType |
-     17 | Bitvectors | VisitBvConcatExpr |
-      8 | Bitvectors | VisitBvExtractExpr |
-\end{verbatim}
+\begin{table}[t]
+  \centering
+  \begin{tabular}{r l l}
+    \hline
+    Count & Feature & Boogie visitor node \\
+    \hline
+    2191 & Maps & \texttt{VisitMapType} \\
+    1776 & Maps & \texttt{VisitLambdaExpr} \\
+    1531 & free requires & \texttt{VisitImplementation} \\
+    1312 & where clauses & \texttt{VisitImplementation} \\
+     134 & Bitvectors & \texttt{VisitBvType} \\
+      17 & Bitvectors & \texttt{VisitBvConcatExpr} \\
+       8 & Bitvectors & \texttt{VisitBvExtractExpr} \\
+    \hline
+  \end{tabular}
+  \caption{Occurrences of selected unsupported or relevant Boogie features in the compiled Dafny integration tests.}
+  \label{tab:dafny-feature-counts}
+\end{table}
 
 We can see that all tests use maps, many use lambda expressions,
 quite a sizeable portion \texttt{free} and \texttt{where} clauses on procedures,
@@ -974,19 +956,12 @@ and procedures marked with free postconditions.
 
 Another test suite to look at are the test inside the Boogie repositor itself
 \footnote{https://github.com/boogie-org/boogie/tree/master/Test}.
-
-\begin{verbatim}
-boogie tests
-- 726 tests
-- 428 (or 310?) success
-- many other errors: parsing, undeclared identifier, ... (ignored)
-- most failed feature: [int]int map with 94 tests using it
-- most non-map failures
-  - free requires clause with 25 tests
-  - Float 22
-  - Bitvectors 17
-  - others appear in less than 15 test cases
-\end{verbatim}
+There we have gathered around 700 tests.
+Many of them were either passing the check,
+or failing before the subset checker.
+The most reported problematic features were again maps,
+with 179 occurences.
+The next non-map related problems occured less than 30 times.
 
 
 \subsection{Methodology Caveats}
@@ -1001,7 +976,7 @@ Nonetheless, it gives us a first hand approximation on which features might be m
 
 
 \subsection{Chosen Feature and its Usage}
-
+\label{sec:goals-to-support}
 
 Our data shows us, that maps seem to be the most useful next extension.
 Supporting maps in their full semantics is beyond the scope of this thesis,
@@ -1010,12 +985,9 @@ Therefore, we target a practically useful subset of map semantics
 and restrict the supported usage patterns.
 We want take a closer look, on how maps are used, to see which use cases we should prioritize,
 One the one hand we will analyse the Boogie program generated from the simple Dafny program more closely.
-We also modify the subsetchecker to also print the corresponding type,
-to see what kind of maps are used in all cases.
-
 Here are the relevant map parts from the compiler Dafny program:
-\begin{verbatim}
 
+\begin{verbatim}
 type Heap = [ref][Field]Box;
 
 revealed function {:inline} read(H: Heap, r: ref, f: Field) : Box
@@ -1054,20 +1026,22 @@ We also have an axiom quantifying over all keys of a map, and even maps themesel
 This implies, that maps have infinite keys.
 This gives already gives us a list of things we need to support certification of Dafny.
 
-Looking at all map usages across all files,
+Looking at all map usages across all Dafny files,
 we did not see any polymorphic maps.
-Also, the nesting levels on the domain seem to be at most two, as is our simple example.
+Supporting this feature would significantly increase the complexity of the development, as generics and polymorphism present inherent formalization challenges, % TODO ref
+including the handling of \emph{impredicative} maps. % TODO ref Gaurav?
+Also, the nesting levels on the domain seem to be at most one, as is our simple example.
 Nesting on the range type is more popular, for example the type \texttt{[[ref][Field]Box,Box,Box,Box]bool} appears more than 100 times.
 And it seems, that there are tests, with a lot more arity (one map having 300 \texttt{Box} in the range type).
-The names suggest, that the might be used to model structs and classe, which would explain the arbitrary amount.
+The names suggest, that the might be used to model structs and classe, which would explain the large amount.
 
 This gives us a list of things to support for Dafny:
 \begin{itemize}
-  \item select and store
+  \item map select and store
   \item abstract type as domain and range types
   \item one level of map nesting in domain types
   \item arbitrary level of nesting in range type
-  \item quantification over maps and domain, implying infinite maps
+  \item quantification over maps and domain types, implying infinite maps
   \item monomorphic maps
   \item lambda expressions
 \end{itemize}
@@ -1075,147 +1049,49 @@ This gives us a list of things to support for Dafny:
 Notably, Viper uses a similar encoding as Dafny, but uses polymorphic map for its encoding. % TODO ref
 Looking at dafny test folder in the Boogie repository \footnote{https://github.com/boogie-org/boogie/tree/master/Test/dafny},
 it seems that is used polymorphic maps to in the past, but ditched them.
-% TODO ref Dafny update moving away from poylmorphic
-
-\begin{verbatim}
-
-- [[Master Thesis/Proofgen/Not Supported]]
-	- `bash boogie-experiments/run-proofgen-supported-check.sh | sort | uniq -c | sort -nr > boogie-tests-statistics-file.txt`
-	- use `onlyCheckProofGenSupport` or `dontStoreProofGenFiles`?
-	- Viper uses Polymorphic maps?
-		- `type HeapType = <A, B> [Ref, Field A B]B;`
-	- old Dafny used Polymorphic maps? (see `boogie/Tests`)
-		- `type Heap = [ref]<alpha>[Field alpha]alpha;`
-		- [Make the Boogie representation of the Dafny heap use only Box #4020](https://github.com/dafny-lang/dafny/pull/4020)
-		- [Monomorphic Field and collection types #4597](https://github.com/dafny-lang/dafny/pull/4597)
-	- Upcoming changes to Boogie: https://github.com/dafny-lang/dafny/issues/4005
-\end{verbatim}
+\footnote{https://github.com/dafny-lang/dafny/pull/4020}\textsuperscript{,}
+\footnote{https://github.com/dafny-lang/dafny/pull/4597}
 
 
 
-\subsection{Goals to Support [TODO: combine with prev section]}
-\label{sec:goals-to-support}
+\subsection{Extensionality Requirement}
 
-\paragraph{Limitations.}
-We will not focus on \textbf{polymorphic} maps.
-Supporting this feature would significantly increase the complexity of the development, as generics and polymorphism present inherent formalization challenges, % TODO ref
-including the handling of \emph{impredicative} maps. % TODO ref Gaurav?
-Furthermore, Dafny has removed its dependence on polymorphic maps, % TODO ref,
-rendering this feature unnecessary for our primary use case.
-
-Another challenge is that maps can take other maps as their domain.
-In Section~\ref{sec:cantor}, we discuss why this poses a fundamental logical difficulty.
-Dafny uses maps in the domain and codomain of other maps.
-Empirically, it appears to use only one level of nesting in the domain,
-meaning that supporting two levels of map domain nesting is sufficient for our purposes.
-
-Another accepted limitation is that the semantics may be program-dependent.
-This implies that a single, fully uniform semantic definition may not cover all programs,
-and that parts of the semantics may rely on the specific input program.
-For example, the semantics may need to explicitly instantiate
-the number of map nesting levels extracted from a given Boogie program.
-A program using \texttt{[int]int} might require a semantics with a nesting level of 1,
-whereas a program using \texttt{[[int]int]int} might require a semantics with a nesting level of 2.
-
-One practical limitation is that we only support single-arity maps.
-As described in Section~\ref{sec:semantics-boogie-maps}, Boogie maps can take multiple keys,
-although this pattern is generally discouraged. % TODO ref to manual claiming that
-Multi-arity maps can be systematically transformed to single-arity maps
-via currying, meaning this limitation does not restrict the fundamental expressiveness of the verification.
-While our initial solutions relied on this assumption,
-we expect that the final architecture can be expanded
-to support multi-arity maps in the future. % TODO ref to future/work, supporting multi-arity maps
-
-
-\paragraph{Necessary Features.}
-To achieve our goal of eventually supporting Dafny verification,
-we must support \emph{two levels of nesting} on the domain types for maps.
-Furthermore, the nesting levels should be \emph{extensible}, or potentially automatically adjustable,
-for future work.
-As the current proof generation is built on the polymorphic type encoding of Boogie,
-our map semantics must satisfy the \emph{map axioms} of the VC generated by Boogie.
-
-
-\subsection{Polymorphic Type Encoding}
-\label{sec:type-encoding}
-
-
-\subsection{Our VC antecedent change} \mbox{}\\
-\label{sec:our-vc-change}
-
-The current axiom governing map updates \eqref{ax:map-update-strong}
-is too strong for our semantics,
-which relies on our stratification solution (explained later in Section~\ref{sec:stratification-solution}).
-The primary issue is that this axiom must hold for every value $m$,
-even if it is not a map, and for every value $k$,
-even if its type does not match the domain type of $m$.
-Accordingly, we weaken the axiom:
-
-\begin{equation}
-  \label{ax:map-update-weak}
-  \begin{aligned}
-    &\forall \ m \ k \ v.\\
-    &\type\ v = \MapTypeInvV\ (\type\ m)\\
-    &\type\ m = \MapType\ (\type\ k)\ (\type\ v)\\
-    &\implies  \Select\ (\Store\ m\ k\ v)\ k = v
-  \end{aligned}
-\end{equation}
-
-With $\type\ m = \MapType\ (\type\ k)\ (\type\ v)$ we guarantee
-that $m$ is indeed a map, and that the store operation is applied with the appropriate types.
-% TODO evaluation
-
-
-\subsection{Extensionality Requirement[TODO]}
-
-Lastly, we require our maps to be extensional. % TODO ref extensionality
-% TODO what is extensional?
-
-\begin{verbatim}
-			- is this an issue for $valid(SMT) \implies ver(BPL)$ ?
-				- not if we make our Boogie semantics stronger (i.e. guarantee extensionality)
-\end{verbatim}
-
-
-% \subsubsection{Why we want extensionality of maps}
-
+Lastly, we require our maps to be extensional.
 A natural question is whether extensionality is strictly necessary.
-Even the official Boogie manual does not guarantee it, % TODO ref
-and no explicit axiom in the VC enforces it.
+There is no explicit axiom in the VC enforcing it.\ref{sec:vc-map-axioms}
 We still argue that this property is important.
 Using the monomorphic type encoding, which defaults to the SMT array theory,
 naturally provides extensionality.
-To remain consistent across different type encodings, maintaining extensionality is highly desirable.
+To remain consistent across different type encodings, maintaining extensionality is desirable.
 
-% Another reason is illustrated by the following example:
+Another reason is illustrated by the following example:
+\begin{verbatim}
+  var a: [int]int;
+  var b: [int]int;
+  var m: [[int]int]int;
 
-% \begin{verbatim}
-%   var a: [int]int;
-%   var b: [int]int;
-%   var m: [[int]int]int;
+  a := (lambda x:int :: x+1);
+  a[42] := 42;
+  b := (lambda x:int :: if x == 42 then 42 else x+1);
 
-%   a := (lambda x:int :: x+1);
-%   a[42] := 42;
-%   b := (lambda x:int :: if x == 42 then 42 else x+1);
+  // assert a == b;  // true if extensional
+  m[a] := 1;
+  m[b] := 2;
+  assert m[a] == 1;  // should never be proven?
+  assert m[a] == 2;  // true if extensional
+\end{verbatim}
 
-%   // assert a == b;  // true if extensional
-%   m[a] := 1;
-%   m[b] := 2;
-%   assert m[a] == 1;  // should never be proven?
-%   assert m[a] == 2;  // true if extensional
-% \end{verbatim}
+Here we created two maps \texttt{a} and \texttt{b}, that behave the same.
+If \texttt{a} and \texttt{b} would be considered differently in our semantics,
+then we are able to store a value at each of them.
+Not having extensionality would mean that the answer to the equality question is unknown,
+not that they are considered different.
+Since we will have a concrete representation of maps in our Isabelle/HOL encoding,
+we have to decide if a map can have multiple representations.
+In this case we strive for one representation,
+enforcing the extensionality which is the behavior for some type encodings of Boogie.
 
-% Here we created two maps \texttt{a} and \texttt{b}, that behave the same.
-% If \texttt{a} and \texttt{b} would be considered differently in our semantics,
-% then we are able to store a value at each of them.
-% This means ...
-
-
-point of nested maps?
-
-\subsection{Final Requirements}
-Summary needed?
-
+% point of nested maps?
 
 
 \section{Supporting Boogie Maps}
@@ -1232,33 +1108,45 @@ After defining the semantics, we must prove that they satisfy our desired proper
 Finally, we must adjust the proof generation module and related helper theorems to enable automatic proof generation for these new targets.
 
 
-\subsection{Semantics: Stratification}
+\subsection{Semantics: Stratification Datatype}
 
 \subsubsection{Value Datatype}
 \label{sec:where-to-start}
 
-[TODO explain why we need one value datatype]
-
-In Boogie semantics, maps are treated as first-class values.
-Consequently, the initial step in supporting them involves extending the existing value datatype.
-The current definition for literals and values is as follows:
+In the formal foundational Boogie semantics defined by the prior work in Isabelle/HOL
+\footnote{https://github.com/viperproject/foundational-boogie},
+there is a (polymorphic) value datatype, representing all values in the semantics.
+This then used to define a state of the program,
+with the current local and global state of the variables:
 
 \begin{verbatim}
 datatype lit =  LBool bool  | LInt int | LReal real
 
-(* The values (and as a result the semantics) are parametrized by the carrier type 'a
-for the abstract values (values that have a type constructed via type constructors) *)
+(* The values (and as a result the semantics)
+are parametrized by the carrier type 'a for the abstract values
+(values that have a type constructed via type constructors) *)
 
 datatype 'a val = LitV lit | AbsV (the_absv: 'a)
+
+type_synonym vname = nat (* variable name, de-bruijn index *)
+type_synonym 'a named_state = "vname -> 'a val"
+
+record 'a nstate =
+  old_global_state :: "'a named_state"
+  global_state :: "'a named_state"
+  local_state :: "'a named_state"
+  binder_state :: "nat -> 'a val"
 \end{verbatim}
 
+In Boogie maps are treated as first-class values.
+Consequently, the initial step in supporting them involves extending the existing value datatype.
 To incorporate Boogie Maps, we must introduce a new constructor to this datatype:
 
 \begin{verbatim}
 datatype 'a val = LitV lit | AbsV (the_absv: 'a) | MapV ?
 \end{verbatim}
 
-The question now is, what should replace the \texttt{?}?
+The question now is, how we should replace the \texttt{?}.
 
 \subsubsection{Challenge: Cantor's Theorem}
 \label{sec:cantor}
@@ -1286,21 +1174,11 @@ This creates a hierarchy of values:
 
 \begin{itemize}[leftmargin=1.5em]
   \item Level 0: Contains only primitive values: literal and abstract values.
-  \item Level 1: Maps with a domain of Level 0 and a codomain of Level 0 and Level 1.
-  \item Level 2: Maps with a domain of Level 0 and Level 1 and a codomain of Level 0, 1, and 2.
-  \item Level $n$: Maps where the domain is of level $\le n-1$ and the codomain is of level $\le n$.
+  \item Level 1: Maps with a domain of Level 0 and a range of Level 0 and Level 1.
+  \item Level 2: Maps with a domain of Level 0 and Level 1 and a range of Level 0, 1, and 2.
+  \item Level $n$: Maps where the domain is of level $\le n-1$ and the range is of level $\le n$.
 \end{itemize}
 
-% [TODO visualization similar to this:]
-% \begin{figure}[h]
-%   \centering
-%   \IfFileExists{map-viz.png}{%
-%     \includegraphics[width=0.75\linewidth]{map-viz.png}%
-%   }{%
-%     \fbox{\parbox[c][4cm][c]{0.75\linewidth}{\centering map-viz.png placeholder}}
-%   }
-%   \caption{Stratified map-value hierarchy (placeholder).}
-% \end{figure}
 
 This approach requires the user to explicitly specify the necessary nesting depth when defining the semantics.
 
@@ -1308,7 +1186,38 @@ To ensure the semantics can represent complex, nested Boogie map types,
 it is essential that each level $n$ is cumulative, incorporating all preceding levels.
 This allows the model to support maps where the keys or values are themselves maps of a lower level.
 For instance, representing types such as
-\texttt{[int][[int]int]int} (a map of level 2, with a domain of level 0 and a codomain of level 2) or \texttt{[[[int]int]int]int} (a map of level 3, with a domain of level 2 and a codomain of level 0).
+\texttt{[int][[int]int]int} (a map of level 2, with a domain of level 0 and a range of level 2) or \texttt{[[[int]int]int]int} (a map of level 3, with a domain of level 2 and a range of level 0).
+
+\begin{figure}[t]
+  \centering
+  \begin{tikzpicture}[font=\small]
+    \tikzstyle{gridbox}=[draw=black, thick, minimum width=2.25cm, minimum height=1.2cm, align=center]
+    \tikzstyle{greenbox}=[gridbox, fill=green!30!black!60]
+
+    \node[gridbox] at (0,0) {};
+    \node[gridbox] at (2.25,0) {key};
+    \node[gridbox] at (4.5,0) {value};
+
+    \node[gridbox] at (0,-1.2) {val0};
+    \node[greenbox] (k0) at (2.25,-1.2) {};
+    \node[greenbox] (v0) at (4.5,-1.2) {};
+
+    \node[gridbox] at (0,-2.4) {val1};
+    \node[greenbox] at (2.25,-2.4) {};
+    \node[greenbox] at (4.5,-2.4) {};
+
+    \node[gridbox] at (0,-3.6) {val2};
+    \node[gridbox] at (2.25,-3.6) {};
+    \node[greenbox] at (4.5,-3.6) {};
+
+    \draw[->, very thick, violet] (2,-1.2) -- (4.5,-1.2);
+  \end{tikzpicture}
+  \caption{Illustration of a stratified map of Level 2.
+  It may take a value of level 0 or 1 as a key,
+  and return values of level 0, 1 or 2.}
+  \label{fig:stratified-map-hierarchy}
+\end{figure}
+
 
 
 \subsubsection{Stratification Datatype}
@@ -1346,11 +1255,8 @@ type_synonym 'a val3210 = "'a val3 + 'a val2 + 'a val1 + 'a val0"
 To integrate these stratified levels into the core semantics,
 we extend the primary \texttt{val} datatype with a generic \texttt{MapV} constructor.
 By utilizing a second type parameter, \texttt{'m}, we decouple the value definition from the specific map implementation:
-
-\begin{verbatim}
-TODO inspired by Gaurav
-https://github.com/viperproject/foundational-boogie/commit/c00254aa736513b3f243aa71182b44043e36c427#diff-6d82a607e399fa940e77790478bb902ad96a9098cd5d0a0a189608ab74f221f2R11
-\end{verbatim}
+\footnote{inspired by the initial attempt of the prior work
+https://github.com/viperproject/foundational-boogie/commit/c00254aa736513b3f243aa71182b44043e36c427}
 
 
 \begin{verbatim}
@@ -1396,7 +1302,7 @@ As the current implementation is limited to single-arity maps
 (Section~\ref{sec:goals-to-support}), the \texttt{TMap} constructor requires only two arguments:
 the key type and the value type.
 Supporting multi-arity maps would necessitate representing the keys as a list of types,
-but the current dual-type representation is sufficient for our defined goals (Section~\ref{sec:goals-to-support}).
+but the current dual-type representation is sufficient for our defined goals.
 
 \paragraph{Type Ambiguity}
 A challenge arises when implementing type extraction for map values.
@@ -1405,7 +1311,6 @@ a single internal Isabelle function could represent multiple distinct Boogie map
 For instance, a map of type \texttt{val1} might contain a function mapping integers and booleans to integers and booleans,
 making it impossible to distinguish from the outside whether it represents
 a \texttt{[int]int}, \texttt{[bool]bool}, or \texttt{[int]bool} map.
-
 To resolve this ambiguity, we explicitly store the intended key and value types within the map datatype:
 
 \begin{isabellebody}
@@ -1437,6 +1342,223 @@ These functions also play a crucial role in satisfying the VC map axioms (Sectio
 especially regarding $\MapType$, $\MapTypeInvK$, and $\MapTypeInvV$.
 
 
+
+\subsection{Semantics: Well Formed Types}
+
+The current datatype definition is too permissive
+and does not inherently satisfy our required map axioms from Section~\ref{sec:vc-map-axioms}.
+We must restrict them by enforcing additional well-formedness properties, denoted by \texttt{wf},
+that the datatype must satisfy.
+
+
+\subsubsection{Inductive Well-Formed Definition}
+\label{sec:wf-definition}
+
+The final inductive definition well-formed definition:
+
+\begin{isabellebody}
+\isanewline
+\isakeywordONE{inductive}\isamarkupfalse%
+\ wf\ \isakeywordTWO{where}\isanewline
+\ \ \ \ wfLitV{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}wf\ {\isacharparenleft}{\kern0pt}LitV\ v{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\ {\isacharbar}{\kern0pt}\ wfAbsV{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}wf\ {\isacharparenleft}{\kern0pt}AbsV\ v{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\ {\isacharbar}{\kern0pt}\isanewline
+\ \ \ \ wfMapV{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isasymlbrakk}\ wf{\isacharunderscore}{\kern0pt}ty\ m{\isacharsemicolon}{\kern0pt}\ \ {\isacharparenleft}{\kern0pt}{\isasymforall}k{\isachardot}{\kern0pt}\ wf\ {\isacharparenleft}{\kern0pt}selectImpl\ m\ k{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharsemicolon}{\kern0pt}\isanewline
+\ \ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isasymforall}k{\isachardot}{\kern0pt}\ {\isacharparenleft}{\kern0pt}{\isasymnot}wf\ k\ {\isasymor}\ type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ k\ {\isasymnoteq}\ key{\isacharunderscore}{\kern0pt}ty\ {\isacharparenleft}{\kern0pt}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ m{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline 
+\ \ \ \ \ \ \ \ \ \ \ {\isasymlongrightarrow}\ {\isacharparenleft}{\kern0pt}selectImpl\ m\ k{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ val{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}type\ {\isacharparenleft}{\kern0pt}val{\isacharunderscore}{\kern0pt}ty\ {\isacharparenleft}{\kern0pt}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ m{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharsemicolon}{\kern0pt}\isanewline
+\ \ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isasymforall}k{\isachardot}{\kern0pt}\ type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ {\isacharparenleft}{\kern0pt}selectImpl\ m\ k{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ val{\isacharunderscore}{\kern0pt}ty\ {\isacharparenleft}{\kern0pt}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ m{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ \ \ {\isasymrbrakk}\ {\isasymLongrightarrow}\ wf\ m{\isachardoublequoteclose}
+\end{isabellebody}
+
+First, we define primitive types, such as literal and abstract values,
+as well-formed.
+Those are our base cases for our inductive definition.
+For a map to be well-formed it has to satisfy four properties.
+
+
+\subsubsection{Closedness of Select \& Store}
+\label{sec:closed}
+
+If we utilize a constrained type and apply operations like select or store,
+the result should be constrained as well; i.e., it must satisfy our desired properties.
+Thus, one fundamental requirement is \texttt{(ALL k. wf k --> wf (selectImpl m k))}.
+\footnote{Assuming we have a suitable definition of \texttt{selectImpl}, which will be introduced in Section~\ref{sec:select}.}
+
+We observe that the definition of \texttt{wf} is dependent on the \texttt{wf} of other values.
+For a recursive definition, we would need to guarantee termination
+(e.g., applying \texttt{wf} only to strictly 'smaller' terms).
+This is non-trivial here because \texttt{selectImpl m k} may return an arbitrary value.
+Fortunately, Isabelle/HOL provides \texttt{inductive} definitions,
+\ref{sec:isabelle}
+allowing us to characterize \texttt{wf} values based on previously determined \texttt{wf} values.
+
+A recursive \texttt{wf} call is not permitted in a negative position. This presents a challenge since:
+\texttt{(ALL k. wf k --> wf (selectImpl m k))} logically translates to \texttt{(ALL k. ¬ wf k OR wf (selectImpl m k))}.
+This restriction also makes intuitive sense, as our inductive definition can construct proofs that values are \texttt{wf},
+but not that they are \texttt{¬wf}.
+Our solution is to strengthen the property by dropping the antecedent,
+enforcing that the result is always \texttt{wf}, regardless of whether the key is \texttt{wf} or not.
+
+\begin{verbatim}
+  (ALL k. wf (selectImpl m k))
+\end{verbatim}
+
+For the store operation, we do not require an additional structural property within the inductive definition, as we can independently derive the lemma:
+\texttt{(ALL k v. wf m AND wf k AND wf v --> wf (storeImpl m k v))}.
+
+
+\subsubsection{Type Safety}
+\label{sec:type-safety}
+From the VC map axiom (\ref{ax:map-select-typesafe}),
+we require the property that if we select from a map using a key of the map's designated domain type,
+the result is of the map's range type.
+In Isabelle, this translates to:
+
+\begin{verbatim}
+(ALL k. wf k AND type_of_val k = key_ty (type_of_val m)
+--> type_of_val (selectImpl m k) = val_ty (type_of_val m))
+\end{verbatim}
+
+%[mention why it is hard to do that structurally using datatypes only?]
+
+We will actually enforce a stronger condition explicitly:
+
+\begin{verbatim}
+(ALL k. type_of_val (selectImpl m k) = val_ty (type_of_val m))
+\end{verbatim}
+
+One reason for this, again, is that \texttt{wf} may not appear in a negative position
+(in this case, on the left-hand side of an implication).
+The weaker version will be a derived property, deduced by combining the stronger condition with our other constraints.
+Enforcing this explicitly is more convenient, as it provides a stronger guarantee when building nested maps and proving their well-formedness.
+
+
+\subsubsection{No Duplicate Representation}
+\label{sec:no-duplicate}
+
+As discussed in Section~\ref{sec:goals-to-support}, we require our maps to be extensional.
+More concretely, this means there must be a unique Isabelle representation for each Boogie map.
+If two map values agree on all keys, they should be represented by the identical Isabelle term.
+The naive definition presents two primary issues in satisfying this property.
+
+\paragraph{Problem 1: Low-level map as a high-level value}
+Consider an \texttt{[int]int} map in Boogie.
+We want to canonically represent this in Isabelle as a value of level 1 (i.e., \texttt{'a val1}).
+Unfortunately, there is nothing to prevent us from representing it as a map at level 3 (i.e., \texttt{'a val3}), since level 3 structurally subsumes \texttt{'a val0} in both its domain and range.
+Consequently, we possess multiple ways to represent the exact same semantic map.
+
+\paragraph{Solution: Type Hierarchies}
+To prevent this ambiguity, we enforce a strict type hierarchy: map types at level $n$ must have either their domain at level $n-1$ or their range at level $n$.
+
+% tmap_lvl, wf_L, wf_ty
+\begin{isabellebody}
+\isanewline
+\isakeywordONE{fun}\isamarkupfalse%
+\ tmap{\isacharunderscore}{\kern0pt}lvl\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}ty\ {\isasymRightarrow}\ nat{\isachardoublequoteclose}\ \isakeywordTWO{where}\isanewline
+\ \ \ \ {\isachardoublequoteopen}tmap{\isacharunderscore}{\kern0pt}lvl\ {\isacharparenleft}{\kern0pt}TMap\ tk\ tv{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ max\ {\isacharparenleft}{\kern0pt}{\isadigit{1}}\ {\isacharplus}{\kern0pt}\ tmap{\isacharunderscore}{\kern0pt}lvl\ tk{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}tmap{\isacharunderscore}{\kern0pt}lvl\ tv{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}tmap{\isacharunderscore}{\kern0pt}lvl\ {\isacharunderscore}{\kern0pt}\ {\isacharequal}{\kern0pt}\ {\isadigit{0}}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isakeywordONE{primrec}\isamarkupfalse%
+\ wf{\isacharunderscore}{\kern0pt}L\ \isakeywordTWO{where}\isanewline
+\ \ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}L\ n\ {\isacharparenleft}{\kern0pt}FunL\ {\isacharunderscore}{\kern0pt}\ tk\ tv{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ {\isacharparenleft}{\kern0pt}\isanewline
+\ \ \ \ {\isacharparenleft}{\kern0pt}tmap{\isacharunderscore}{\kern0pt}lvl\ tk\ {\isasymle}\ n{\isacharminus}{\kern0pt}{\isadigit{1}}{\isacharparenright}{\kern0pt}\ {\isasymand}\ {\isacharparenleft}{\kern0pt}tmap{\isacharunderscore}{\kern0pt}lvl\ tv\ {\isasymle}\ n{\isacharparenright}{\kern0pt}\ {\isasymand}\isanewline
+\ \ \ \ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}tmap{\isacharunderscore}{\kern0pt}lvl\ tk\ {\isacharequal}{\kern0pt}\ n{\isacharminus}{\kern0pt}{\isadigit{1}}{\isacharparenright}{\kern0pt}\ {\isasymor}\ {\isacharparenleft}{\kern0pt}tmap{\isacharunderscore}{\kern0pt}lvl\ tv\ {\isacharequal}{\kern0pt}\ n{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\ \ \isanewline
+\isanewline
+\isakeywordONE{fun}\isamarkupfalse%
+\ wf{\isacharunderscore}{\kern0pt}ty\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ valn\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ \isakeywordTWO{where}\isanewline
+\ \ \ \ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}ty\ {\isacharparenleft}{\kern0pt}LitV\ v{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ True{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}ty\ {\isacharparenleft}{\kern0pt}AbsV\ v{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ True{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}ty\ {\isacharparenleft}{\kern0pt}MapV\ {\isacharparenleft}{\kern0pt}Inr\ {\isacharparenleft}{\kern0pt}Inr\ m{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ wf{\isacharunderscore}{\kern0pt}L\ {\isadigit{1}}\ m{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}ty\ {\isacharparenleft}{\kern0pt}MapV\ {\isacharparenleft}{\kern0pt}Inr\ {\isacharparenleft}{\kern0pt}Inl\ m{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ wf{\isacharunderscore}{\kern0pt}L\ {\isadigit{2}}\ m{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}ty\ {\isacharparenleft}{\kern0pt}MapV\ {\isacharparenleft}{\kern0pt}Inl\ m{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ wf{\isacharunderscore}{\kern0pt}L\ {\isadigit{3}}\ m{\isachardoublequoteclose}
+\end{isabellebody}
+
+\begin{figure}[t]
+  \centering
+  \begin{tikzpicture}[font=\small]
+    \tikzstyle{gridbox}=[draw=black, thick, minimum width=2.25cm, minimum height=1.2cm, align=center]
+    \tikzstyle{greenbox}=[gridbox, fill=green!30!black!60]
+    \tikzstyle{orangebox}=[gridbox, fill=orange!30!black!40]
+
+    \node[gridbox] at (0,0) {};
+    \node[gridbox] at (2.25,0) {key};
+    \node[gridbox] at (4.5,0) {value};
+
+    \node[gridbox] at (0,-1.2) {val0};
+    \node[greenbox] (k0) at (2.25,-1.2) {};
+    \node[greenbox] (v0) at (4.5,-1.2) {};
+
+    \node[gridbox] at (0,-2.4) {val1};
+    \node[orangebox] at (2.25,-2.4) {};
+    \node[greenbox] at (4.5,-2.4) {};
+
+    \node[gridbox] at (0,-3.6) {val2};
+    \node[gridbox] at (2.25,-3.6) {};
+    \node[orangebox] at (4.5,-3.6) {};
+
+    \draw[->, very thick, violet] (2,-1.2) -- (4.5,-1.2);
+  \end{tikzpicture}
+  \caption{Illustration of a stratified map of Level 2.
+  Its domain type either has to be of level 1
+  or its range type of level 2.}
+  \label{fig:stratified-map-hierarchy}
+\end{figure}
+
+\paragraph{Problem 2: Function behavior outside the domain}
+Consider the Boogie map \texttt{(lambda x: int :: x+1)}.
+In its Isabelle embedding, the domain is not rigidly constrained to integers only.
+Therefore, we might construct two maps that execute identically on integers but differ when applied to booleans.
+To guarantee extensionality, we must ensure that maps sharing the same Boogie behavior also execute identically outside their intended domain. 
+
+A robust solution is to enforce a sentinel value for all keys residing outside the expected domain.
+It is important to note that "values outside the intended domain" include not only values of the wrong type but also values that are not well-formed.
+Consequently, we enforce a property of the following form:
+
+\begin{isabellebody}
+{\isasymforall}k{\isachardot}{\kern0pt}\ {\isacharparenleft}{\kern0pt}{\isasymnot}wf\ k\ {\isasymor}\ type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ k\ {\isasymnoteq}\ key{\isacharunderscore}{\kern0pt}ty\ {\isacharparenleft}{\kern0pt}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ m{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isasymlongrightarrow}\ {\isacharparenleft}{\kern0pt}selectImpl\ m\ k{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ sentinel?{\kern0pt}
+\end{isabellebody}
+
+The question remains: what should this \texttt{sentinel?} value be? As established in Section~\ref{sec:type-safety}, we cannot cleanly perform a case distinction on \texttt{wf k} because \texttt{wf} is not permitted in a negative position.
+Thus, if presented with a key \texttt{k} of unknown well-formedness, we cannot statically determine whether \texttt{type\_of\_val (selectImpl m k) = val\_ty (type\_of\_val m)} should hold, or if \texttt{type\_of\_val (selectImpl m k) = sentinel?} applies. 
+
+However, if the \texttt{sentinel?} itself is of type \texttt{val\_ty (type\_of\_val m)}, both conditions unify seamlessly.
+We leverage the helper function \texttt{val\_of\_type}, which returns a default value of a given type, to generate our sentinel:\\
+\texttt{sentinel? = val\_of\_type (val\_ty (type\_of\_val m))}
+
+\begin{table}[t]
+\begin{tabular}{|l|l|l|}
+  \hline
+                 & \texttt{k} has correct type & \texttt{k} has incorrect type \\ \hline
+  \texttt{wf k}  & \texttt{(selectImpl m k)} has correct type & \texttt{sentinel}  \\ \hdashline
+\texttt{\textasciitilde wf k}  & \texttt{sentinel}    & \texttt{sentinel}  \\ \hline
+\end{tabular}
+
+  \caption{Cases in which we must return a sentinel value and cases in which the return type must be correct.
+  The dashed line represents our inability to distinguish by cases on \texttt{wf k}.}
+  \label{tab:sentinel-cases}
+\end{table}
+
+\subsubsection{Well-Formed Type Definition}
+\label{sec:constrained-types}
+
+Using our well-formed definition\ref{sec:wf-definition},
+we can create a new 'constrained' type
+via the \texttt{typedef} command in Isabelle.\ref{sec:isabelle}
+
+\begin{verbatim}
+definition wf_map_set :: "'a val321 set" where
+"wf_map_set = {m. wf (MapV m)}"
+
+typedef (overloaded) 'a wf_maps = "wf_map_set :: 'a val321 set"
+<proof>
+  (* showing some witness, such that wf_maps is not empty *)
+
+type_synonym 'a wf_val = "('a, 'a wf_maps) val"
+\end{verbatim}
+
+Showing a witness for maps requires some non-trivial work,
+which we leave out for brevity.
+
+
+\subsection{Semantics: Map Operations}
 \subsubsection{Internal Datatype Conversion}
 \label{sec:conversion-internal}
 % [TODO should this just be in the appendix?]
@@ -1488,8 +1610,8 @@ Here, \texttt{m} is a function mapping values of level $\le 1$ to values of leve
 Consequently, the application \texttt{m k} yields a value of level $\le 2$, and the \texttt{Inr} constructor ensures the final result conforms to the overall type \texttt{'a val3210}.
 The logic for the remaining map levels is analogous.
 
-For primitive value cases, the specific return value is inconsequential, provided it is well-formed, ensuring that \texttt{selectImpl} remains closed under \texttt{wf}.
-We opt to return an unspecified\footnote{More accurately described as unspecified rather than literally undefined.} primitive value, as all such values trivially satisfy well-formedness.
+For primitive value cases, the specific return value is inconsequential, (provided it is well-formed, ensuring that \texttt{selectImpl} remains closed under \texttt{wf}, see Section~\ref{sec:wf-definition}).
+We opt to return an \texttt{undefined}\footnote{More accurately described as unspecified rather than literally undefined.} primitive value, as all such values trivially satisfy well-formedness.
 
 If an evaluation encounters a key from an unsupported level, the function gracefully falls back to returning the map's sentinel value, thereby preserving all required well-formedness invariants.
 
@@ -1539,201 +1661,74 @@ It ensures the update is exclusively executed when the types explicitly match.
 Omitting this check would risk a violation of the established well-formedness properties.
 
 
-\subsection{Semantics: Well Formed Types}
-
-The current datatype definition is too permissive
-and does not inherently satisfy our required map axioms from Section~\ref{sec:vc-map-axioms}.
-We must restrict them by enforcing additional well-formedness properties, denoted by \texttt{wf},
-that the datatype must satisfy.
-
-
-\subsubsection{Inductive Well-Formed Definition [TODO]}
-\label{sec:wf-definition}
-
-[TODO reformulate as spoiler then explanation]
-
-By unifying all the previously discussed constraints, we arrive at our final inductive definition for \texttt{wf}:
-
-\begin{isabellebody}
-\isanewline
-\isakeywordONE{inductive}\isamarkupfalse%
-\ wf\ \isakeywordTWO{where}\isanewline
-\ \ \ \ wfLitV{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}wf\ {\isacharparenleft}{\kern0pt}LitV\ v{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\ {\isacharbar}{\kern0pt}\ wfAbsV{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}wf\ {\isacharparenleft}{\kern0pt}AbsV\ v{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\ {\isacharbar}{\kern0pt}\isanewline
-\ \ \ \ wfMapV{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isasymlbrakk}\ wf{\isacharunderscore}{\kern0pt}ty\ m{\isacharsemicolon}{\kern0pt}\ \ {\isacharparenleft}{\kern0pt}{\isasymforall}k{\isachardot}{\kern0pt}\ wf\ {\isacharparenleft}{\kern0pt}selectImpl\ m\ k{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharsemicolon}{\kern0pt}\isanewline
-\ \ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isasymforall}k{\isachardot}{\kern0pt}\ {\isacharparenleft}{\kern0pt}{\isasymnot}wf\ k\ {\isasymor}\ type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ k\ {\isasymnoteq}\ key{\isacharunderscore}{\kern0pt}ty\ {\isacharparenleft}{\kern0pt}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ m{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isasymlongrightarrow}\ {\isacharparenleft}{\kern0pt}selectImpl\ m\ k{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ val{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}type\ {\isacharparenleft}{\kern0pt}val{\isacharunderscore}{\kern0pt}ty\ {\isacharparenleft}{\kern0pt}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ m{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharsemicolon}{\kern0pt}\isanewline
-\ \ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isasymforall}k{\isachardot}{\kern0pt}\ type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ {\isacharparenleft}{\kern0pt}selectImpl\ m\ k{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ val{\isacharunderscore}{\kern0pt}ty\ {\isacharparenleft}{\kern0pt}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ m{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
-\ \ \ \ \ \ {\isasymrbrakk}\ {\isasymLongrightarrow}\ wf\ m{\isachardoublequoteclose}
-\end{isabellebody}
-
-
-\subsubsection{Closedness of Select \& Store}
-\label{sec:closed}
-
-If we utilize a constrained type and apply operations like select or store,
-the result should be constrained as well; i.e., it must satisfy our desired properties.
-Thus, one fundamental requirement is \texttt{(ALL k. wf k --> wf (selectImpl m k))}.
-\footnote{Assuming we have a suitable definition of \texttt{selectImpl}, which will be introduced in Section~\ref{sec:select}.}
-
-We observe that the definition of \texttt{wf} is dependent on the \texttt{wf} of other values.
-For a recursive definition, we would need to guarantee termination
-(e.g., applying \texttt{wf} only to strictly 'smaller' terms).
-This is non-trivial here because \texttt{selectImpl m k} may return an arbitrary value.
-Fortunately, Isabelle/HOL provides \texttt{inductive} definitions, %TODO ref,
-allowing us to characterize \texttt{wf} values based on previously determined \texttt{wf} values.
-
-A recursive \texttt{wf} call is not permitted in a negative position. This presents a challenge since:
-\texttt{(ALL k. wf k --> wf (selectImpl m k))} logically translates to \texttt{(ALL k. ¬ wf k OR wf (selectImpl m k))}.
-This restriction also makes intuitive sense, as our inductive definition can construct proofs that values are \texttt{wf},
-but not that they are \texttt{¬wf}.
-Our solution is to strengthen the property by dropping the antecedent:
-\texttt{(ALL k. wf (selectImpl m k))},
-enforcing that the result is always \texttt{wf}, regardless of whether the key is \texttt{wf} or not.
-
-For the store operation, we do not require an additional structural property within the inductive definition, as we can independently derive the lemma:
-\texttt{(ALL k v. wf m AND wf k AND wf v --> wf (storeImpl m k v))}.
-
-This yields the following interim definition:
-
-\begin{isabellebody}
-\isanewline
-\isakeywordONE{inductive}\isamarkupfalse%
-\ wf\ \isakeywordTWO{where}\isanewline
-\ \ \ \ wfLitV{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}wf\ {\isacharparenleft}{\kern0pt}LitV\ v{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\ {\isacharbar}{\kern0pt}\ wfAbsV{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}wf\ {\isacharparenleft}{\kern0pt}AbsV\ v{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\ {\isacharbar}{\kern0pt}\isanewline
-\ \ \ \ wfMapV{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isasymlbrakk}\ {\isacharparenleft}{\kern0pt}{\isasymforall}k{\isachardot}{\kern0pt}\ wf\ {\isacharparenleft}{\kern0pt}selectImpl\ m\ k{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}
-{\isasymrbrakk}\ {\isasymLongrightarrow}\ wf\ m{\isachardoublequoteclose}
-\end{isabellebody}
-
-Here we have base cases stating that primitive values are well-formed,
-and a map case where additional properties serve as antecedents for implying \texttt{wf}.
-
-\subsubsection{Type Safety}
-\label{sec:type-safety}
-From the VC map axiom (\ref{ax:map-select-typesafe}),
-we require the property that if we select from a map using a key of the map's designated domain type,
-the result is of the map's codomain type.
-In Isabelle, this translates to:
-
-\begin{verbatim}
-(ALL k. wf k AND type_of_val k = key_ty (type_of_val m)
---> type_of_val (selectImpl m k) = val_ty (type_of_val m))
-\end{verbatim}
-
-%[TODO mention why it is hard to do that structurally using datatypes only?]
-
-We will actually enforce a stronger condition explicitly:
-
-\begin{verbatim}
-(ALL k. type_of_val (selectImpl m k) = val_ty (type_of_val m))
-\end{verbatim}
-
-One reason for this, again, is that \texttt{wf} may not appear in a negative position
-(in this case, on the left-hand side of an implication).
-The weaker version will be a derived property, deduced by combining the stronger condition with our other constraints.
-Enforcing this explicitly is more convenient, as it provides a stronger guarantee when building nested maps and proving their well-formedness.
-
-We extend our definition of \texttt{wf} accordingly:
-\begin{isabellebody}
-\isakeywordONE{inductive}\isamarkupfalse%
-\ wf\ \isakeywordTWO{where}\isanewline
-\ \ \ \ wfLitV{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}wf\ {\isacharparenleft}{\kern0pt}LitV\ v{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\ {\isacharbar}{\kern0pt}\ wfAbsV{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}wf\ {\isacharparenleft}{\kern0pt}AbsV\ v{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\ {\isacharbar}{\kern0pt}\isanewline
-\ \ \ \ wfMapV{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isasymlbrakk}\ 
-{\isacharparenleft}{\kern0pt}{\isasymforall}k{\isachardot}{\kern0pt}\ wf\ {\isacharparenleft}{\kern0pt}selectImpl\ m\ k{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharsemicolon}{\kern0pt}\isanewline
-\ \ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isasymforall}k{\isachardot}{\kern0pt}\ type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ {\isacharparenleft}{\kern0pt}selectImpl\ m\ k{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ val{\isacharunderscore}{\kern0pt}ty\ {\isacharparenleft}{\kern0pt}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ m{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
-\ \ \ \ \ \ {\isasymrbrakk}\ {\isasymLongrightarrow}\ wf\ m{\isachardoublequoteclose}
-\end{isabellebody}
-
-\subsubsection{No Duplicate Representation}
-\label{sec:no-duplicate}
-
-As discussed in Section~\ref{sec:goals-to-support}, we require our maps to be extensional.
-More concretely, this means there must be a unique Isabelle representation for each Boogie map.
-If two map values agree on all keys, they should be represented by the identical Isabelle term.
-The naive definition presents two primary issues in satisfying this property.
-
-\paragraph{Problem 1: Low-level map as a high-level value}
-Consider an \texttt{[int]int} map in Boogie.
-We want to canonically represent this in Isabelle as a value of level 1 (i.e., \texttt{'a val1}).
-Unfortunately, there is nothing to prevent us from representing it as a map at level 3 (i.e., \texttt{'a val3}), since level 3 structurally subsumes \texttt{'a val0} in both its domain and codomain.
-Consequently, we possess multiple ways to represent the exact same semantic map.
-
-\paragraph{Solution: Type Hierarchies}
-To prevent this ambiguity, we enforce a strict type hierarchy: map types at level $n$ must have either their domain at level $n-1$ or their codomain at level $n$.
-
-% tmap_lvl, wf_L, wf_ty
-\begin{isabellebody}
-\isanewline
-\isakeywordONE{fun}\isamarkupfalse%
-\ tmap{\isacharunderscore}{\kern0pt}lvl\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}ty\ {\isasymRightarrow}\ nat{\isachardoublequoteclose}\ \isakeywordTWO{where}\isanewline
-\ \ \ \ {\isachardoublequoteopen}tmap{\isacharunderscore}{\kern0pt}lvl\ {\isacharparenleft}{\kern0pt}TMap\ tk\ tv{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ max\ {\isacharparenleft}{\kern0pt}{\isadigit{1}}\ {\isacharplus}{\kern0pt}\ tmap{\isacharunderscore}{\kern0pt}lvl\ tk{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}tmap{\isacharunderscore}{\kern0pt}lvl\ tv{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
-\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}tmap{\isacharunderscore}{\kern0pt}lvl\ {\isacharunderscore}{\kern0pt}\ {\isacharequal}{\kern0pt}\ {\isadigit{0}}{\isachardoublequoteclose}\isanewline
-\isanewline
-\isakeywordONE{primrec}\isamarkupfalse%
-\ wf{\isacharunderscore}{\kern0pt}L\ \isakeywordTWO{where}\isanewline
-\ \ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}L\ n\ {\isacharparenleft}{\kern0pt}FunL\ {\isacharunderscore}{\kern0pt}\ tk\ tv{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ {\isacharparenleft}{\kern0pt}\isanewline
-\ \ \ \ {\isacharparenleft}{\kern0pt}tmap{\isacharunderscore}{\kern0pt}lvl\ tk\ {\isasymle}\ n{\isacharminus}{\kern0pt}{\isadigit{1}}{\isacharparenright}{\kern0pt}\ {\isasymand}\ {\isacharparenleft}{\kern0pt}tmap{\isacharunderscore}{\kern0pt}lvl\ tv\ {\isasymle}\ n{\isacharparenright}{\kern0pt}\ {\isasymand}\isanewline
-\ \ \ \ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}tmap{\isacharunderscore}{\kern0pt}lvl\ tk\ {\isacharequal}{\kern0pt}\ n{\isacharminus}{\kern0pt}{\isadigit{1}}{\isacharparenright}{\kern0pt}\ {\isasymor}\ {\isacharparenleft}{\kern0pt}tmap{\isacharunderscore}{\kern0pt}lvl\ tv\ {\isacharequal}{\kern0pt}\ n{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\ \ \isanewline
-\isanewline
-\isakeywordONE{fun}\isamarkupfalse%
-\ wf{\isacharunderscore}{\kern0pt}ty\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ valn\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ \isakeywordTWO{where}\isanewline
-\ \ \ \ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}ty\ {\isacharparenleft}{\kern0pt}LitV\ v{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ True{\isachardoublequoteclose}\isanewline
-\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}ty\ {\isacharparenleft}{\kern0pt}AbsV\ v{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ True{\isachardoublequoteclose}\isanewline
-\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}ty\ {\isacharparenleft}{\kern0pt}MapV\ {\isacharparenleft}{\kern0pt}Inr\ {\isacharparenleft}{\kern0pt}Inr\ m{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ wf{\isacharunderscore}{\kern0pt}L\ {\isadigit{1}}\ m{\isachardoublequoteclose}\isanewline
-\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}ty\ {\isacharparenleft}{\kern0pt}MapV\ {\isacharparenleft}{\kern0pt}Inr\ {\isacharparenleft}{\kern0pt}Inl\ m{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ wf{\isacharunderscore}{\kern0pt}L\ {\isadigit{2}}\ m{\isachardoublequoteclose}\isanewline
-\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}ty\ {\isacharparenleft}{\kern0pt}MapV\ {\isacharparenleft}{\kern0pt}Inl\ m{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ wf{\isacharunderscore}{\kern0pt}L\ {\isadigit{3}}\ m{\isachardoublequoteclose}
-\end{isabellebody}
-
-
-\paragraph{Problem 2: Function behavior outside the domain}
-Consider the Boogie map \texttt{(lambda x: int :: x+1)}.
-In its Isabelle embedding, the domain is not rigidly constrained to integers only.
-Therefore, we might construct two maps that execute identically on integers but differ when applied to booleans.
-To guarantee extensionality, we must ensure that maps sharing the same Boogie behavior also execute identically outside their intended domain. 
-
-A robust solution is to enforce a sentinel value for all keys residing outside the expected domain.
-It is important to note that "values outside the intended domain" include not only values of the wrong type but also values that are not well-formed.
-Consequently, we enforce a property of the following form:
-
-\begin{isabellebody}
-{\isasymforall}k{\isachardot}{\kern0pt}\ {\isacharparenleft}{\kern0pt}{\isasymnot}wf\ k\ {\isasymor}\ type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ k\ {\isasymnoteq}\ key{\isacharunderscore}{\kern0pt}ty\ {\isacharparenleft}{\kern0pt}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ m{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isasymlongrightarrow}\ {\isacharparenleft}{\kern0pt}selectImpl\ m\ k{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ sentinel?{\kern0pt}
-\end{isabellebody}
-
-The question remains: what should this \texttt{sentinel?} value be? As established in Section~\ref{sec:type-safety}, we cannot cleanly perform a case distinction on \texttt{wf k} because \texttt{wf} is not permitted in a negative position.
-Thus, if presented with a key \texttt{k} of unknown well-formedness, we cannot statically determine whether \texttt{type\_of\_val (selectImpl m k) = val\_ty (type\_of\_val m)} should hold, or if \texttt{type\_of\_val (selectImpl m k) = sentinel?} applies. 
-
-However, if the \texttt{sentinel?} itself is of type \texttt{val\_ty (type\_of\_val m)}, both conditions unify seamlessly.
-We leverage the helper function \texttt{val\_of\_type}, which returns a default value of a given type, to generate our sentinel:\\
-\texttt{sentinel? = val\_of\_type (val\_ty (type\_of\_val m))}
-
-% [TODO picture of table showing the fuzzy border]
-
-
-\subsubsection{Well-Formed Type Definition}
-\label{sec:constrained-types}
-
-Using these properties, we can create a new 'constrained' type
-via the \texttt{typedef} command in Isabelle. % TODO ref
-
-\begin{verbatim}
-definition wf_map_set :: "'a val321 set" where
-"wf_map_set = {m. wf (MapV m)}"
-
-typedef (overloaded) 'a wf_maps = "wf_map_set :: 'a val321 set"
-<proof>
-  (* showing some witness, such that wf_maps is not empty *)
-
-type_synonym 'a wf_val = "('a, 'a wf_maps) val"
-\end{verbatim}
-
-
 \subsection{Proof of Properties}
 
-[TODO intertwine thses sections?]
+\subsubsection{Our VC antecedent change} \mbox{}\\
+\label{sec:our-vc-change}
 
-\subsubsection{Proving Axioms on the Raw Type}
+The current axiom governing map updates \eqref{ax:map-update-strong}
+is too strong for our semantics,
+which relies on our stratification solution (Section~\ref{sec:stratification-solution}).
+The primary issue is that this axiom must hold for every value $m$,
+even if it is not a map, and for every value $k$,
+even if its type does not match the domain type of $m$.
+Accordingly, we weaken the axiom:
+
+\begin{equation}
+  \label{ax:map-update-weak}
+  \begin{aligned}
+    &\forall \ m \ k \ v.\\
+    &\type\ v = \MapTypeInvV\ (\type\ m)\\
+    &\type\ m = \MapType\ (\type\ k)\ (\type\ v)\\
+    &\implies  \Select\ (\Store\ m\ k\ v)\ k = v
+  \end{aligned}
+\end{equation}
+
+With $\type\ m = \MapType\ (\type\ k)\ (\type\ v)$, we guarantee
+that $m$ is indeed a map and that the store operation is applied to values of the appropriate types.
+This changes the VC produced by the Boogie verifier
+and may therefore reduce the number of successful verifications.
+We expect it to work in many cases, since the input programs are type-checked.
+Nonetheless, the solver has a weaker axiom available,
+so we must evaluate whether it is in fact too weak.
+% TODO evaluation
+
+
+\subsubsection{Showing Desired Properties}
+\label{sec:typedef-lifting}
 
 Having formalized the datatype, well-formedness, select, and store operations, we must now demonstrate that they satisfy our theoretical goals, specifically the VC map axioms detailed in Section~\ref{sec:vc-map-axioms}.
+As discussed in Section~\ref{sec:constrained-types}, we embed our well-formedness properties directly into a new constrained type.
+We must then "lift" our select and store functions, alongside their proven lemmas, so that they operate seamlessly on this new type.
+We have successfully proven the following lemmas.
 
-We have successfully proven the following lemmas (the full Isabelle proofs are omitted here for brevity):
+We first show, that our map operations are closed under well-formedness:
+
+\begin{isabellebody}
+\isakeywordONE{lemma}\isamarkupfalse%
+\ selectClosedWf{\isacharcolon}{\kern0pt}
+{\isachardoublequoteopen}wf\ m {\isasymRightarrow}\ wf\ {\isacharparenleft}{\kern0pt}selectImpl\ m\ k{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+
+\isakeywordONE{lemma}\isamarkupfalse%
+\ storeClosedWf{\isacharcolon}{\kern0pt}
+{\isachardoublequoteopen}[wf\ m, wf\ k,\ wf\ v] {\isasymRightarrow}\ wf\ {\isacharparenleft}{\kern0pt}storeImpl\ m\ k{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\end{isabellebody}
+
+With the help of these lemmas we are able to \emph{lift} our operations to our new type:
+\begin{isabellebody}
+\isakeywordONE{lift{\isacharunderscore}{\kern0pt}definition}\isamarkupfalse%
+\ wf{\isacharunderscore}{\kern0pt}select\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a{\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}absval\ wf{\isacharunderscore}{\kern0pt}val\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ wf{\isacharunderscore}{\kern0pt}val\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ wf{\isacharunderscore}{\kern0pt}val{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{is}\ selectImpl\isanewline
+<proof>\isanewline
+
+\isakeywordONE{lift{\isacharunderscore}{\kern0pt}definition}\isamarkupfalse%
+\ wf{\isacharunderscore}{\kern0pt}store\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a{\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}absval\ wf{\isacharunderscore}{\kern0pt}val\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ wf{\isacharunderscore}{\kern0pt}val\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ wf{\isacharunderscore}{\kern0pt}val\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ wf{\isacharunderscore}{\kern0pt}val{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{is}\ storeImpl\isanewline
+<proof>\isanewline
+\end{isabellebody}
+
+
+Then we want to show that our type satisfies the VC axioms\ref{sec:vc-map-axioms}.
 
 \begin{isabellebody}
 \isakeywordONE{lemma}\isamarkupfalse%
@@ -1745,10 +1740,33 @@ We have successfully proven the following lemmas (the full Isabelle proofs are o
 \ \ \isakeywordTWO{shows}\ {\isachardoublequoteopen}selectImpl\ {\isacharparenleft}{\kern0pt}storeImpl\ M\ k\ v{\isacharparenright}{\kern0pt}\ k\ {\isacharequal}{\kern0pt}\ v{\isachardoublequoteclose}\isanewline
 
 \isakeywordONE{lemma}\isamarkupfalse%
+\ Ax{\isadigit{1}}{\isacharcolon}{\kern0pt}\isanewline
+\ \ \isakeywordTWO{fixes}\ m{\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}{\isachardoublequoteopen}{\isacharprime}{\kern0pt}a{\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}absval\ wf{\isacharunderscore}{\kern0pt}val{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{assumes}\ {\isachardoublequoteopen}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ m\ {\isacharequal}{\kern0pt}\ TMap\ {\isacharparenleft}{\kern0pt}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ k{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ v{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{shows}\ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}select\ {\isacharparenleft}{\kern0pt}wf{\isacharunderscore}{\kern0pt}store\ m\ k\ v{\isacharparenright}{\kern0pt}\ k\ {\isacharequal}{\kern0pt}\ v{\isachardoublequoteclose}\isanewline
+<proof>\isanewline
+\end{isabellebody}
+
+
+\begin{isabellebody}
+\isakeywordONE{lemma}\isamarkupfalse%
 \ ArrayAxStable{\isacharcolon}{\kern0pt}\isanewline
 \ \ \isakeywordTWO{assumes}\ {\isachardoublequoteopen}x\ {\isasymnoteq}\ y{\isachardoublequoteclose}\isanewline
 \ \ \isakeywordTWO{shows}\ {\isachardoublequoteopen}selectImpl\ {\isacharparenleft}{\kern0pt}storeImpl\ M\ x\ v{\isacharparenright}{\kern0pt}\ y\ {\isacharequal}{\kern0pt}\ selectImpl\ M\ y{\isachardoublequoteclose}\isanewline
 
+\isakeywordONE{lemma}\isamarkupfalse%
+\ Ex{\isacharcolon}{\kern0pt}\isanewline
+\ \ \isakeywordTWO{assumes}\ {\isachardoublequoteopen}m\ {\isacharequal}{\kern0pt}\ MapV\ m{\isacharprime}{\kern0pt}\ {\isasymand}\ n\ {\isacharequal}{\kern0pt}\ MapV\ n{\isacharprime}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{assumes}\ {\isachardoublequoteopen}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ m\ {\isacharequal}{\kern0pt}\ type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ n{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{assumes}\ {\isachardoublequoteopen}{\isasymforall}k{\isachardot}{\kern0pt}\ type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ k\ {\isacharequal}{\kern0pt}\ key{\isacharunderscore}{\kern0pt}ty\ {\isacharparenleft}{\kern0pt}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ m{\isacharparenright}{\kern0pt}\ {\isasymlongrightarrow}\ wf{\isacharunderscore}{\kern0pt}select\ m\ k\ {\isacharequal}{\kern0pt}\ wf{\isacharunderscore}{\kern0pt}select\ n\ k{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{shows}\ {\isachardoublequoteopen}m\ {\isacharequal}{\kern0pt}\ n{\isachardoublequoteclose}\isanewline
+<proof>\isanewline
+\end{isabellebody}
+
+And finally showing extensionality.
+Importantly, we can only assume that they behave the same in a type safe manner,
+as the other behaviors are note observable in a type-safe Boogie program:
+\begin{isabellebody}
 \isakeywordONE{lemma}\isamarkupfalse%
 \ extensionalityMapV{\isacharcolon}{\kern0pt}\isanewline
 \ \ \isakeywordTWO{assumes}\ {\isachardoublequoteopen}wf\ {\isacharparenleft}{\kern0pt}MapV\ m{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
@@ -1758,61 +1776,11 @@ We have successfully proven the following lemmas (the full Isabelle proofs are o
 \ \ \isakeywordTWO{shows}\ {\isachardoublequoteopen}m\ {\isacharequal}{\kern0pt}\ n{\isachardoublequoteclose}\isanewline
 
 \isakeywordONE{lemma}\isamarkupfalse%
-\ selectClosedWf{\isacharcolon}{\kern0pt}\isanewline
-\ \ \isakeywordTWO{assumes}\ {\isachardoublequoteopen}wf\ m{\isachardoublequoteclose}\isanewline
-\ \isakeywordTWO{shows}\ {\isachardoublequoteopen}wf\ {\isacharparenleft}{\kern0pt}selectImpl\ m\ k{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
-
-\isakeywordONE{lemma}\isamarkupfalse%
-\ storeClosedWf{\isadigit{3}}{\isacharcolon}{\kern0pt}\isanewline
-\ \ \isakeywordTWO{assumes}\ {\isachardoublequoteopen}wf\ m{\isachardoublequoteclose}\ {\isachardoublequoteopen}wf\ k{\isachardoublequoteclose}\ {\isachardoublequoteopen}wf\ v{\isachardoublequoteclose}\isanewline
-\ \ \isakeywordTWO{assumes}\ {\isachardoublequoteopen}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ m\ {\isacharequal}{\kern0pt}\ TMap\ {\isacharparenleft}{\kern0pt}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ k{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ v{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
-\ \ \isakeywordTWO{shows}\ {\isachardoublequoteopen}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ {\isacharparenleft}{\kern0pt}selectImpl\ {\isacharparenleft}{\kern0pt}storeImpl\ m\ k\ v{\isacharparenright}{\kern0pt}\ x{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ val{\isacharunderscore}{\kern0pt}ty\ {\isacharparenleft}{\kern0pt}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ {\isacharparenleft}{\kern0pt}storeImpl\ m\ k\ v{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}
-
-\end{isabellebody}
-
-These lemmas demonstrate that our unconstrained definitions function correctly.
-However, they carry numerous \texttt{wf} assumptions.
-We can elegantly eliminate these assumptions by baking the constraints directly into our type, as shown in Section~\ref{sec:typedef-lifting}.
-
-
-\subsubsection{Typedef and Lifting}
-\label{sec:typedef-lifting}
-
-As discussed in Section~\ref{sec:constrained-types}, we embed our well-formedness properties directly into a new constrained type.
-We must now "lift" our select and store functions, alongside their proven lemmas, so that they operate seamlessly on this new type:
-
-\begin{isabellebody}
-\isakeywordONE{lift{\isacharunderscore}{\kern0pt}definition}\isamarkupfalse%
-\ wf{\isacharunderscore}{\kern0pt}select\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a{\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}absval\ wf{\isacharunderscore}{\kern0pt}val\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ wf{\isacharunderscore}{\kern0pt}val\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ wf{\isacharunderscore}{\kern0pt}val{\isachardoublequoteclose}\isanewline
-\ \ \isakeywordTWO{is}\ selectImpl\isanewline
-<proof>\isanewline
-
-\isakeywordONE{lift{\isacharunderscore}{\kern0pt}definition}\isamarkupfalse%
-\ wf{\isacharunderscore}{\kern0pt}store\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a{\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}absval\ wf{\isacharunderscore}{\kern0pt}val\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ wf{\isacharunderscore}{\kern0pt}val\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ wf{\isacharunderscore}{\kern0pt}val\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ wf{\isacharunderscore}{\kern0pt}val{\isachardoublequoteclose}\isanewline
-\ \ \isakeywordTWO{is}\ storeImpl\isanewline
-<proof>\isanewline
-
-\isakeywordONE{lemma}\isamarkupfalse%
-\ Ax{\isadigit{1}}{\isacharcolon}{\kern0pt}\isanewline
-\ \ \isakeywordTWO{fixes}\ m{\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}{\isachardoublequoteopen}{\isacharprime}{\kern0pt}a{\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}absval\ wf{\isacharunderscore}{\kern0pt}val{\isachardoublequoteclose}\isanewline
-\ \ \isakeywordTWO{assumes}\ {\isachardoublequoteopen}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ m\ {\isacharequal}{\kern0pt}\ TMap\ {\isacharparenleft}{\kern0pt}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ k{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ v{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
-\ \ \isakeywordTWO{shows}\ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}select\ {\isacharparenleft}{\kern0pt}wf{\isacharunderscore}{\kern0pt}store\ m\ k\ v{\isacharparenright}{\kern0pt}\ k\ {\isacharequal}{\kern0pt}\ v{\isachardoublequoteclose}\isanewline
-<proof>\isanewline
-
-\isakeywordONE{lemma}\isamarkupfalse%
-\ Ex{\isacharcolon}{\kern0pt}\isanewline
-\ \ \isakeywordTWO{assumes}\ {\isachardoublequoteopen}m\ {\isacharequal}{\kern0pt}\ MapV\ m{\isacharprime}{\kern0pt}\ {\isasymand}\ n\ {\isacharequal}{\kern0pt}\ MapV\ n{\isacharprime}{\kern0pt}{\isachardoublequoteclose}\isanewline
-\ \ \isakeywordTWO{assumes}\ {\isachardoublequoteopen}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ m\ {\isacharequal}{\kern0pt}\ type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ n{\isachardoublequoteclose}\isanewline
-\ \ \isakeywordTWO{assumes}\ {\isachardoublequoteopen}{\isasymforall}k{\isachardot}{\kern0pt}\ type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ k\ {\isacharequal}{\kern0pt}\ key{\isacharunderscore}{\kern0pt}ty\ {\isacharparenleft}{\kern0pt}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ m{\isacharparenright}{\kern0pt}\ {\isasymlongrightarrow}\ wf{\isacharunderscore}{\kern0pt}select\ m\ k\ {\isacharequal}{\kern0pt}\ wf{\isacharunderscore}{\kern0pt}select\ n\ k{\isachardoublequoteclose}\isanewline
-\ \ \isakeywordTWO{shows}\ {\isachardoublequoteopen}m\ {\isacharequal}{\kern0pt}\ n{\isachardoublequoteclose}\isanewline
-<proof>\isanewline
-
-\isakeywordONE{lemma}\isamarkupfalse%
 \ Ax{\isadigit{2}}{\isacharunderscore}{\kern0pt}wf{\isacharunderscore}{\kern0pt}val{\isacharcolon}{\kern0pt}\isanewline
 \ \ \isakeywordTWO{shows}\ {\isachardoublequoteopen}x\ {\isacharequal}{\kern0pt}\ y\ {\isasymor}\ wf{\isacharunderscore}{\kern0pt}select\ {\isacharparenleft}{\kern0pt}wf{\isacharunderscore}{\kern0pt}store\ m\ x\ v{\isacharparenright}{\kern0pt}\ y\ {\isacharequal}{\kern0pt}\ wf{\isacharunderscore}{\kern0pt}select\ m\ y{\isachardoublequoteclose}\isanewline
 <proof>\isanewline
-
 \end{isabellebody}
+
 
 With this lifted type and these verified lemmas, we successfully defined a formally sound semantics for Boogie maps, supporting up to three levels of domain nesting, that fully satisfies our targeted goals (\ref{sec:goals-to-support}), particularly the VC map axioms (\ref{sec:vc-map-axioms}).
 
@@ -1841,7 +1809,7 @@ fun type_of_val :: "'a absval_ty_fun => 'a val => ty"
 This design presents a significant hurdle because \texttt{type\_of\_val} is an integral part of the well-formedness (\texttt{wf}) predicate,
 which in turn defines our constrained type \texttt{'a wf\_val} \ref{sec:constrained-types}.
 In Isabelle/HOL, a type definition (typedef) cannot depend on a dynamic term or value like \texttt{absval\_ty\_fun}.
-Furthermore, typedef commands are not permitted inside a locale context. % TODO ref
+Furthermore, typedef commands are not permitted inside a locale context. \ref{sec:isabelle}
 
 To resolve this, we leverage Isabelle type classes.
 By restricting our type parameter \texttt{'a} using a type class,
@@ -1891,19 +1859,28 @@ type_synonym 'a wf_val = "('a, 'a wf_maps) val"
 
 \subsubsection{Expression Reduction, Big Step Semantics and Locale}
 
-
 Beyond data representation, we must formally define map behaviors within the big-step semantics,
 specifically defining how map selection and storage reduce.
 To preserve modularity and hide implementation details from the broader semantics,
-we encapsulate the reduction logic within an Isabelle locale. % TODO ref Isabelle manual?,
+we encapsulate the reduction logic within an Isabelle locale. \ref{sec:isabelle}
 
 \begin{verbatim}
+[TODO transform]
+
 locale semantics =
   fixes map_select :: "('a::absval, 'm::mapval) val => ('a, 'm) val => ('a, 'm) val"
   fixes map_store  :: "('a, 'm) val => ('a, 'm) val => ('a, 'm) val => ('a, 'm) val"
 begin
 
-  | RedMapSelect: 
+  | RedMapSelect: "[[ \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e1, n_s\<rangle> \<Down> v1;
+                \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e2, n_s\<rangle> \<Down> v2;
+                map_select v1 v2 = v ]] \<Longrightarrow>
+             \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>MapSelect e1 e2, n_s\<rangle> \<Down> v"
+  | RedMapStore: "[[ \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e1, n_s\<rangle> \<Down> v1;
+                \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e2, n_s\<rangle> \<Down> v2;
+                \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e3, n_s\<rangle> \<Down> v3;
+                map_store v1 v2 v3 = v ]] \<Longrightarrow>
+             \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>MapStore e1 e2 e3, n_s\<rangle> \<Down> v"
 \end{verbatim}
 
 
@@ -1921,16 +1898,17 @@ Importantly, this instantiation must occur before defining automated proof tacti
 as theorems referenced inside a locale behave differently when evaluated in an instantiated context.
 
 
-\subsubsection{Non Empty Types \& Closed Types Assumption [TODO]}
+\subsubsection{Non Empty Types \& Closed Types Assumption}
 \label{sec:non-empty-types}
 
-[TODO: talk about type variable issue in the future?]
+% [TODO: talk about type variable issue in the future?]
 
-The original proof generation relied on global assumptions regarding type closedness and non-emptiness.
-Specifically, it assumed that the type of every value is closed (containing no free type variables)
-\footnote{This assumption should be challenged, when one decides to support polymorphic maps,
-as even their concrete values are type parameterized.}
-and that there exists a concrete value for every closed type.  % as defined in their manual. %TODO ref
+The original proof generation relied on global assumptions of type closedness and non-emptiness.
+Specifically, it assumed that the type of every value is closed, i.e., that it contains no free type variables,
+\footnote{This assumption should be reconsidered when supporting polymorphic maps,
+because even concrete map values are parameterized by types.}
+and that a concrete value exists for every closed type,
+as defined by Boogie \cite{leino2008boogie}.
 
 \begin{verbatim}
   Closed: "(ALL v. (closed ((type_of_val ) v)))" and 
@@ -2010,112 +1988,13 @@ the automatic proof tactic is limited at this stage.
 Therefore, it is premature to create an extensive benchmark suite for testing.
 Nonetheless, we can evaluate the implementation using several manually created example tests,
 as well as modified existing tests from the Boogie and Proofgen repositories that involve maps.
+Most working examples are interger or boolean maps,
+that use map select and store operations,
+but do not involve axioms with quantifications.
 
-
-\subsubsection{Forcing Polymorphic Type Encoding}
-
-Before demonstrating the examples, it is important to note how the tool must be executed.
-As detailed in Section~\ref{sec:limitations},
-we currently only support single-arity maps
-and do not natively support the map assignment operation.
-Consequently, these constructs must be manually converted into equivalent supported code before running the tool.
-
-% TODO move this section?
-The current proof generation module operates exclusively on Boogie's polymorphic type encoding.
-Because newer versions of Boogie default to monomorphic encoding, we must explicitly pass the \texttt{/typeEncoding:p} flag. % TODO ref default type encoding change
-Furthermore, to prevent Boogie from aggressively monomorphizing the program during translation,
-we inject a dummy polymorphic function into the test files to force the preservation of the polymorphic encoding.
+Here is an example we are currently not able to automatcally certify:
 
 \begin{verbatim}
-function dummy<T>(x: T) : T; //to force Boogie not to monomorphize
-\end{verbatim}
-
-
-\subsubsection{Example Tests [TODO]}
-
-Let us see, what kind of Boogie programs we are able to verify its translations of:
-
-\paragraph{Simple Test}
-\begin{verbatim}
-function dummy<T>(x: T) : T; //to force Boogie not to monomorphize
-
-procedure very_simple_map_test ()
-{
-    var my_map: [int]int;
-    var i: int;
-    assert my_map[i] * my_map[i] >= 0;
-}
-\end{verbatim}
-
-This example shows one of the simplest ways to use maps.
-It is a simple map, with \texttt{int} as domain and codomain.
-And it only uses the select operation.
-
-
-\paragraph{Nested Integer Maps}
-\begin{verbatim}
-function dummy<T>(x: T) : T; //to force Boogie not to monomorphize
-
-procedure nested ()
-{
-    
-    var m: [int]int;
-    var m0: [int]int;
-    var mm: [[int]int]int;
-
-    m := m[1 := 2];
-    mm := mm[m := 12];
-    m0 := m;
-    assert mm[m] == 12;
-
-    m := m[1 := 3];
-    mm := mm[m := 13];
-    assert mm[m] == 13;
-
-    m := m[1 := 2];
-    assert mm[m0] == 12;
-}
-\end{verbatim}
-
-This shows, that nested map can used.
-If we add more than 4 nestings levels in the domain,
-then the proof fails due to our assurance of all values having at most map level of $3$,
-as described in Section~\ref{sec:non-empty-types}.
-It also shows that the store operation can be used.
-
-
-
-\paragraph{Abstract Type with a Map}
-\begin{verbatim}
-function dummy<T>(x: T) : T; //to force Boogie not to monomorphize
-
-type A _;
-
-function idF(x: A [int]int) returns (A [int]int) { x }
-
-procedure absMap ()
-{
-    var a: A [int]int;
-    assert a == idF(a);
-}
-\end{verbatim}
-
-This is an interesting example as it is not really about maps.
-Maps are used as a type argument for the abstract value.
-This also means, according to our semantic, that this is a value of level $0$, a primitive value.
-This does not cause any issues for the proof generation of Boogie translations.
-It will be interesting to see, if this is challenging for proof generation of language that use Boogie.
-This might be the case if one wants to to make a proof generation for Viper or Dafny.
-
-
-\subsubsection{Example Tests That do not work}
-
-Here is an example that fails to verify:
-
-\paragraph{Selecting Unspecified Element}
-\begin{verbatim}
-// fails: tactic ‹ prove_axiom_vc_tac
-
 function dummy<T>(x: T) : T; //to force Boogie not to monomorphize
 
 axiom (forall i: int, m: [int]int :: i > 0 ==> m[i] == 1);
@@ -2129,12 +2008,9 @@ procedure p ()
 }
 \end{verbatim}
 
-It seems, that it has difficulty using axioms, that explicitly use map expressions.
-
-
 \subsubsection{Newly Supported Boogie Tests}
 
-The preceeding work \cite{parthasarathy2021formally} included seven external benchmarks, that initially used maps.
+The prior work \cite{parthasarathy2021formally} included seven external benchmarks, that initially used maps.
 They rewrote it to avoid using maps, and used it as additional tests.
 We used the original tests, rewrote them to avoid the convenient map assign operator,
 and run our tool.
@@ -2184,7 +2060,7 @@ So one need to either continue working on the next unsupported feature,
 or implement a pruning operation, as not all generated Boogie code is necessary for the Dafny input.
 
 
-\subsubsection{Preceeding Tests}
+\subsubsection{Prior Tests}
 We also ran the existing test suite of the proof generation, that use no maps.
 We want to see, if all our changes broke some existing tests.
 Fortunately, out of the 120 tests that were passing before our changes,
@@ -2215,17 +2091,21 @@ While this serves as a practical limitation for the prototype,
 it is theoretically extensible to any finite depth required by a target Boogie program.
 This depth must be determined in advance so that we can appropriately define the types and functions of the map semantics.
 Consequently, different input programs may yield distinct instantiations of the semantics.
-A notable characteristic of this approach is that the value semantics inherently become program-dependent.
+A notable characteristic of this approach is that the value semantics inherently become program-dependent,
+implying that a single, fully uniform semantic definition may not cover all programs.
+
+
+\subsubsection{VC change}
 
 \subsubsection{Single-Arity Maps}
 Boogie allows maps to take multiple keys (see Section~\ref{sec:semantics-boogie-maps}).
 Our semantics, and therefore the proof generation, are currently limited to a single key.
 As previously mentioned, we can systematically transform multi-arity maps into single-arity maps via currying,
-where the codomain is itself a map that takes the subsequent key.
+where the range is itself a map that takes the subsequent key.
 We adopted this limitation to make the initial project scope more feasible.
 Early conceptual designs relied on this assumption,
 as it helped ensure that the domain only utilized lower levels
-and that either the domain or codomain resided at its maximal potential level.
+and that either the domain or range resided at its maximal potential level.
 
 Using the well-formed type definition and inductive structure described in Section~\ref{sec:wf-definition},
 it should be possible to natively support multi-arity maps.
@@ -2237,6 +2117,7 @@ This extension should still satisfy our desired properties.
 Alternatively, if this structural change proves unviable,
 multi-arity maps can be handled via an automatic front-end transformation to single-arity maps,
 essentially treating the multi-key syntax as syntactic sugar.
+
 
 \subsubsection{No Map Assign Statement}
 We currently omit support for Boogie's convenient map assignment syntax (e.g., \texttt{M[x, y] := 1}), as discussed in Section~\ref{sec:semantics-boogie-maps}.
@@ -2255,7 +2136,7 @@ We have included specific integer and boolean lemmas to verify common, simple us
 A deeper understanding of the existing \texttt{ML} tactics and extending them in a more general, exhaustive manner
 is necessary to increase the verification success rate of generated proofs.
 
-\subsubsection{Non-trivial semantics}
+% \subsubsection{Non-trivial semantics}
 
 % \subsubsection{Cleaning Up}
 % % Map Semantics
@@ -2269,9 +2150,20 @@ is necessary to increase the verification success rate of generated proofs.
 
 During the design phase, several alternative approaches were considered to address the complexities of modeling Boogie maps. We briefly outline these alternatives and the rationale behind our ultimate design choices.
 
-\subsubsection{association list / finite map [TODO]}
+\subsubsection{Association list and finite maps}
 
-    (lambda x :: x + 1)
+Our first idea was to model a map as an association list.
+This is not a valid strategy, because Boogie maps are total functions and therefore infinite(see Section~\ref{sec:semantics-boogie-maps}).
+Another idea, inspired by Section~2.1 of Burak Ekici et al.~\cite{ekici2017smtcoq},
+is to use a finite mapping together with a default value for keys not contained in the mapping.
+We argue that this is not appropriate for our use case,
+because such a representation cannot capture all lambda expressions,
+for example:
+
+\begin{verbatim}
+var m: [int] int;
+m := (lambda x:int :: if i > 0 then 1 else -1);
+\end{verbatim}
 
 
 \subsubsection{Semantics Based on Types Used in the Input Program}
@@ -2284,7 +2176,7 @@ This stands in contrast to our current approach, which uniformly models all map 
 
 A significant hurdle with this approach was the representation of abstract types.
 We later realized that Isabelle's \texttt{typedecl} command could potentially create types corresponding to these abstract types,
-which could then be used to represent the domains and codomains of our maps.
+which could then be used to represent the domains and ranges of our maps.
 
 The primary advantage of this approach is that it largely eliminates the need for complex well-formedness definitions.
 The disadvantage, however, is the extensive overhead: one would need to statically extract all types, instantiate the map semantics for every observed type, and define polymorphic select and store operations for all possible type combinations. It remains an open question whether the complexity of generating these bespoke semantics outweighs the complexity of our unified, invariant-based approach.
@@ -2308,7 +2200,7 @@ A recurring issue was that our map datatypes were overly permissive, capable of 
 (e.g., non-type-safe maps or multiple representations of the same extensional Boogie map).
 This motivated our rigorous well-formedness definition (Section~\ref{sec:wf-definition}).
 
-Another potential avenue to enforce extensionality natively is the use of quotient types. % TODO ref
+Another potential avenue to enforce extensionality natively is the use of quotient types. \cite{huffman2013lifting}
 Quotient types allow the definition of a new type by abstracting over multiple underlying representations using an equivalence relation.
 Due to time constraints and the advanced Isabelle expertise required, we did not pursue this direction.
 However, it represents a highly promising avenue for simplifying map semantics in the future.
@@ -2352,7 +2244,7 @@ By restricting the semantics to expressible functions, we bypass the cardinality
 \subsubsection{Alternative Logic Frameworks and Proof Assistants}
 
 Given these challenges, one might ask whether Isabelle/HOL is the appropriate tool for defining map semantics.
-Because the extensive preceding work was built upon Isabelle/HOL, we elected to continue within this ecosystem.
+Because the extensive prior work was built upon Isabelle/HOL, we elected to continue within this ecosystem.
 
 However, if we wish to adjust the map semantics dynamically based on the nesting depth of the input program,
 our datatype inherently depends on a numerical value.
@@ -2361,9 +2253,7 @@ A dependently typed language (such as Coq, Lean, or Agda) could potentially defi
 Dependent types might also alleviate the need for our complex well-formedness predicates,
 as constraints could be baked directly into the type signatures corresponding to the Boogie values.
 
-
-\subsubsection{Do we need one type for all values?}
-[TODO]
+% \subsubsection{Do we need one type for all values?}
 
 
 \subsubsection{New Boogie Language: B3}
@@ -2407,16 +2297,16 @@ This functionality completely breaks our stratification approach (Section~\ref{s
 as a map of level $n$ fundamentally cannot possess a domain of level $n$.
 It remains unclear under which circumstances such highly cyclic maps remain logically consistent.
 Supporting such maps would require an entirely different semantic approach.
-However, as noted in preceding work, such pathological use cases rarely appear in practice,
+However, as noted in prior work, such pathological use cases rarely appear in practice,
 suggesting that one might safely restrict the generality of map semantics to accommodate standard, practical verification tasks.
 
 \subsubsection{Monomorphic Type Encoding}
 
 The entire proof generation module currently relies on Boogie's polymorphic type encoding.
-At the time of the preceding work, this was the default encoding;
+At the time of the prior work, this was the default encoding;
 however, the default has since switched to monomorphic type encoding.
 Adapting the proof generation to support monomorphic type encoding could significantly benefit map semantics.
-The monomorphic encoding utilizes more restrictive SMT Array Theory axioms in the verification conditions. % TODO ref.
+The monomorphic encoding utilizes more restrictive SMT Array Theory axioms in the verification conditions. \ref{sec:type-encoding}
 Leveraging these restrictions could facilitate a simpler formulation of the map semantics, potentially enabling more general map behaviors.
 
 \subsubsection{Addressing Current Limitations}
@@ -2429,7 +2319,7 @@ and strengthening the \texttt{ML} proof tactics to enable a higher rate of autom
 \subsubsection{Extending Map Nesting Levels}
 
 Our solution currently supports maps with up to three levels of nesting in their domain types.
-There is no theoretical limit for nesting range (codomain) types, as recursion on the codomain is logically safe (see Section~\ref{sec:cantor}).
+There is no theoretical limit for nesting range types, as recursion on the range is logically safe (see Section~\ref{sec:cantor}).
 Because deeply nested domains are rare in practical benchmarks, a three-level limit serves as a highly practical bound.
 Nevertheless, a fully generalized semantics is desirable.
 Extending our approach to support an arbitrarily large, bounded (or even unbounded) number of nesting levels is a clear next step.
@@ -2445,9 +2335,9 @@ For instance, the proof generation module currently fails when encountering proc
 Furthermore, several value conversion functions (e.g., converting a \texttt{real} to an \texttt{int}) remain unimplemented.
 Addressing these unsupported features is the necessary next step toward achieving fully foundational verification for Dafny programs.
 
-\subsubsection{Improve Proofgen code}
-- new CLI interface
-- reduce intrusion
+% \subsubsection{Improve Proofgen code}
+% - new CLI interface
+% - reduce intrusion
 
 
 
@@ -2474,5 +2364,73 @@ Addressing these unsupported features is the necessary next step toward achievin
 \appendix
 \section{Appendix}
 \label{sec:appendix}
+
+\subsection{Type of Val for Maps}
+
+\begin{verbatim}
+(* Semantics.thy *)
+text<Type interpretation:
+Each value of the abstract carrier type must be mapped to a corresponding type (constructed via a
+type constructor).>
+
+class absval =
+  fixes absval_ty :: "'a => (tcon_id x ty list)"
+
+class mapval =
+  fixes mapval_ty :: "'a => (ty x ty)"
+
+fun type_of_val :: "('a::absval, 'm::mapval) val => ty"
+  where
+   "type_of_val (LitV v) = TPrim (type_of_lit v)"
+ | "type_of_val (AbsV v) = TCon (fst (absval_ty v)) (snd (absval_ty v))"
+ | "type_of_val (MapV v) = TMap (fst (mapval_ty v)) (snd (mapval_ty v))"
+
+fun tmap_lvl :: "ty => nat" where
+    "tmap_lvl (TMap tk tv) = max (1 + tmap_lvl tk) (tmap_lvl tv)"
+  | "tmap_lvl (TCon _ ty_args) = 0"
+  | "tmap_lvl (TVar i) = 0"
+  | "tmap_lvl _ = 0"
+
+
+(* Map3Semantics.thy *)
+subsection <Type Of Val>
+
+primrec tyL where "tyL (FunL f tk tv) = (tk, tv)"
+
+fun ty321 :: "'a val321 => ty x ty" where
+    "ty321 (Inr (Inr m)) = tyL m"
+  | "ty321 (Inr (Inl m)) = tyL m"
+  | "ty321 (Inl m) = tyL m"
+
+instantiation L :: (type) mapval begin
+  fun mapval_ty_L where "mapval_ty_L x = tyL x"
+  instance .. end
+
+instantiation sum :: (mapval, mapval) mapval begin
+  primrec mapval_ty_sum :: "'a + 'b => ty x ty" where
+      "mapval_ty_sum (Inl x) = mapval_ty x"
+    | "mapval_ty_sum (Inr x) = mapval_ty x"
+  instance .. end
+
+lemma mapval_ty_eq_ty321: "mapval_ty = ty321"
+  apply (rule, rename_tac x)
+  by (case_tac x rule: ty321.cases; simp)
+
+fun key_ty where "key_ty (TMap tk _) = tk" | "key_ty _ = undefined"
+fun val_ty where "val_ty (TMap _ tv) = tv" | "val_ty _ = undefined"
+
+primrec wf_L where
+  "wf_L n (FunL _ tk tv) = (
+    (tmap_lvl tk <= n-1) AND (tmap_lvl tv <= n) AND
+    ((tmap_lvl tk = n-1) OR (tmap_lvl tv = n)))"  (* guarantee highest key or value on this level *)
+
+fun wf_ty :: "'a valn => bool" where
+    "wf_ty (LitV v) = True"
+  | "wf_ty (AbsV v) = True"
+  | "wf_ty (MapV (Inr (Inr m))) = wf_L 1 m"
+  | "wf_ty (MapV (Inr (Inl m))) = wf_L 2 m"
+  | "wf_ty (MapV (Inl m)) = wf_L 3 m"
+
+\end{verbatim}
 
 \end{document}
