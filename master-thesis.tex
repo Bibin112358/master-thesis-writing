@@ -2,10 +2,12 @@
 \usepackage[margin=1in]{geometry}
 \usepackage{amsmath,amssymb}
 \usepackage{graphicx}
+\usepackage{tikz}
 %\usepackage{hyperref}
 \usepackage{enumitem}
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
+\usetikzlibrary{arrows.meta,positioning,calc}
 
 % Isabelle Packages
 \usepackage{isabelle}
@@ -20,7 +22,7 @@
 
 \title{Evolving and Extending Certificate Generation for a Program Verifier}
 \author{Bibin Muttappillil}
-\date{2026 April 16}
+\date{2026 April 17}
 
 \begin{document}
 
@@ -31,12 +33,12 @@ Supervisors: Yushuo Xiao and Prof.~Dr.~Peter M\"uller
 \end{center}
 
 \begin{abstract}
-  Lorem Ipsum
+  Lorem Ipsum TODO
 \end{abstract}
 
 
 
-\section*{Acknowledgements}
+\section*{Acknowledgements [TODO]}
 
 
 \tableofcontents
@@ -136,25 +138,250 @@ Finally, Section~\ref{sec:conclusion} concludes the thesis.
 \section{Background}
 \label{sec:background}
 
-  %- Isabelle? ITP
 
-\subsection{Preceding work by Parthasarathy}
+\subsection{Boogie Language}
+
+\paragraph{Official Resource}
+
+A good resource for the boogie language is the paper by K. Rustan M. Leino \cite{leino2008boogie}, describing the language,
+which is also offically linked on their GitHub page
+\footnote{https://github.com/boogie-org/boogie}.
+Unfortunately, it seems that it is not up-to-date with the development of the langauge
+\footnote{https://boogie-docs.readthedocs.io/en/latest/LangRef.html\#inconsistent-assumptions}
+\footnote{https://github.com/dafny-lang/dafny/issues/4005\#issuecomment-1570363166}.
+It is still a good basis to start from, as it seems to be the most complete reference we found.
+
+\paragraph{Boogie} This language is similar in style of Viper and Dafny,
+but with less higher-level features.
+It resembels a procedural language,
+with assignements, control-flow statements (\texttt{if}, \texttt{while}, \texttt{goto}),
+side-effect free functions and procedures, which may be polymorphic.
+Being an IVL, it also has \texttt{assume}, \texttt{assert}, \texttt{axiom} statements, that way also use quantifiers.
+These are for encoding the specification to define what the correct intended behaviour of the program should be.
+We will not delve into too much into the details of the language.
+We refere interested readers to the resources pointed before.
+Here is an example to get a feeling for the language:
+
+\begin{verbatim}
+// code inspired from Dafny's encoding
+
+type Array _ _;
+function lookup<Dom, Ran> (a: Array Dom Ran, i: Dom) : Ran;
+
+type ref;
+const null: ref;
+
+type Field;
+
+type Box;
+type Heap = Array ref (Array Field Box);
+
+function read(H: Heap, r: ref, f: Field) : Box
+{
+    lookup(lookup(H, r), f)
+}
+
+function assign(H: Heap, r: ref, f: Field, b: Box) : Heap;
+axiom (forall heap: Heap, r: ref, f: Field, b: Box ::
+  r != null ==> read(assign(heap, r, f, b), r, f) == b);
+
+procedure positive() returns (r: int);
+    free ensures r > 0;
+
+procedure foo() returns (b: Box)
+{
+    var H: Heap;
+    var r: ref;
+    var f: Field;
+    var i: int;
+    var b1: Box;
+    var b2: Box;
+
+    assume r != null;
+    call i := positive();
+
+    if (i > 0)
+    {
+        b := b1;
+    }
+    else
+    {
+        b := b2;
+    }
+
+    H := assign(H, r, f, b);
+
+    assert read(H, r, f) == b1;
+}
+\end{verbatim}
+
+\paragraph{Polymorphic}
+We can see, that the function \texttt{lookup} has type parameters between \texttt{<>},
+meaning it is a polymorphic function.
+
+\paragraph{Type Declaration and Abstract Values} Boogie allow you to declare new types
+with the \texttt{type} syntax. We will refer to values of these types as \emph{abstract values}.
+The type decleration may take type parmeters, that can be used to create new types with the given instantiation,
+as seen by the example of \texttt{Array}.
+
+\paragraph{Type Synonym}
+The \texttt{type} keyword can also be used to create type synonyms instead of new types.
+
+\paragraph{Axiom and Quantifiers}
+Boogie allows to introduce global assumption via the \texttt{axiom} keyword.
+That means, we will assume this property holds and disregard any program execution that do not satisfy this axiom.
+Ofter these axioms are used in conjuction with quantifiers like \texttt{forall}.
+This lets one define a property for every value of a certain type.
+
+\paragraph{Free}
+We have decorated the procedure \texttt{positive} with the attribute \texttt{free ensures}.
+The latter keyword is used to specify a post-condition of a procedure or function,
+meaning this assertion should hold at the exit of the funciton.
+The first keyword is telling Boogie to not require the assertion checks,
+but you may still use it as an assumption when it is called.
+
+
+\subsection{Boogie Maps}
+\label{sec:semantics-boogie-maps}
+
+The most relevant language constract for this project are Boogie maps,
+since our contribution is to support them.
+Let's start by illustrating how maps are used in Boogie.
+
+\begin{verbatim}
+procedure simple ()
+{
+    var y: int;
+    var a: [int] int;
+    var b: [int] int;
+    
+    y := a[0];       // select
+    a := a[2 := 1];  // store and return a new map
+    a[2] := 1;       // convenient map assign syntax for the above
+
+    // lambda expression
+    a := (lambda x: int :: if x > 0 then y + x + x else y + x);
+    b := (lambda x: int :: if x < 0 then y + x     else y + x + x);
+  
+    assert a == b;
+}
+\end{verbatim}
+
+With the syntax \texttt{var m:[D] R}, we can declare a map
+with domain type \texttt{R} and range type \texttt{R}.
+Using a map, we can select a value at a given key
+and obtain an updated map by storing a new value at a corresponding key.
+
+Interestingly, lambda expressions can be treated as maps.
+Thus, a map behaves like a function that is a first-class value and may be updated.
+Importantly, it is \textbf{not} like a dictionary or an association list,
+as those are usually finite mappings.
+
+There are more complex map types.
+They can have multiple keys, which we then call multi-arity maps.
+The domain and range types can themselves be map types,
+thus enabling nested map types.
+Multi-arity maps are discourage, according to this source
+\footnote{https://boogie-docs.readthedocs.io/en/latest/LangRef.html\#inconsistent-assumptions}.
+They can be transformed into nested single-arity maps.
+
+\begin{verbatim}
+procedure complex ()
+{
+    var y: int;
+    var a: [int] int;
+    var d: [ [int]int, int ] int;   // multi-arity
+    var c: [ [int]int ] [int] int;  // curried
+    
+    c[a][y] := y;
+    d[a, y] := y;
+}
+\end{verbatim}
+
+Maps can also be polymorphic, i.e. have a type parameters:
+
+\begin{verbatim}  
+procedure poly ()
+{
+    var p: <S>[S]S;
+    p[0] := 1;
+    p[true] := false;
+    p[p] := p; 
+    // impredicative polymorphism, recursive types
+}
+\end{verbatim}
+
+\footnote{Examples taken and adapted from https://ethz.ch/content/dam/ethz/special-interest/infk/chair-program-method/pm/documents/Education/Courses/SS2017/Program\%20Verification/08-Boogie.pdf}
+
+This is a powerful feature whose support is outside the scope of this thesis,
+as outlined in our goals (\ref{sec:goals-to-support}).
+
+
+\subsection{Prior work by Parthasarathy}
 \label{sec:prior-work}
-We build on the approach by Parthasarathy et al.~\cite{parthasarathy2021formally}.
+We build on the prior work done by Parthasarathy et al.~\cite{parthasarathy2021formally}.
 
-\paragraph{Overall Approach}
-- validate each run
+\paragraph{Overall Approach} Proving the implementation of the Boogie verifer would be a hard task.
+It is a large and complex code bsae, that keeps evolving over time.
+So the approach by the prior work was to instead validate individual verification runs.
+Meaning the goal was to show that the validity of the outputed VC implies the correctness of the input program.
 
-\paragraph{What is formally proven?}
-- SMT VC => correct Boogie program in Isabelle
+\paragraph{Formal Semantics} We also have to define what it means for a Boogie program to be correct.
+For that need a formal semantics of how Boogie is to behave.
+Since this did not exists before, the work has formalized part of the Boogie semantics
+in a interactive theorem prover, Isabelle/HOL.
+
+\paragraph{Proof Generation Module}
+To generate this proof the work has instrumented the code base of the Boogie verifier.
+This module then produces and embedding of the Boogie program and the VC in Isabelle/HOL.
+It also gathers key information during the translation to be able to produce the desired proof.
+See Figure~\ref{fig:proofgen-pipeline} for an illustrative diagram.
+
+\begin{figure}[t]
+  \centering
+  \begin{tikzpicture}[
+    >=Latex,
+    font=\small,
+    box/.style={draw=black, thick, minimum width=4.1cm, minimum height=0.95cm, align=center},
+    sembox/.style={draw=green!55!black, thick, minimum width=4.1cm, minimum height=0.95cm, align=center},
+    thinarr/.style={->, thick},
+    dasharr/.style={->, thick, dashed},
+    proofbox/.style={draw=orange!90!black, very thick, rounded corners=10pt, minimum width=4.2cm, minimum height=0.95cm, align=center}
+  ]
+    \node[box] (bp) at (0,0) {Boogie Program};
+    \node[box, minimum width=1.7cm] (vc) at (10.2,0) {VC};
+    \node[sembox] (sem) at (0,-2.7) {Boogie Embedding};
+    \node[sembox, minimum width=1.7cm] (vcemb) at (10.2,-2.7) {VC Embedding};
+    \node[proofbox] (proofgen) at (6.0,-1.15) {boogie-proofgen};
+    \node[sembox, minimum width=3.8cm] (foundational) at (6,-4.55) {Foundational Boogie};
+
+    \draw[thinarr, magenta!65!black] (bp.east) -- node[above, text=magenta!65!black, font=\large] {code-to-VC translation} (vc.west);
+    \draw[dasharr, green!60!black] (bp.south) -- node[left, text=black] {embedding} (sem.north);
+    \draw[dasharr, green!60!black] (vc.south) -- node[right, text=black] {embedding} (vcemb.north);
+    \draw[thick, dashed, orange!90!black] ($(proofgen.north)+(0,0.05)$) -- ++(0,0.6);
+    \draw[dasharr, orange!90!black] ($(proofgen.south)+(0,-0.05)$) -- (6.0,-2.74);
+    \draw[thinarr, green!55!black] (vcemb.west) -- node[below, text=green!55!black, font=\large] {$\mathrm{valid}(VC) \models \mathrm{correct}(BP)$} (sem.east);
+    \draw[thinarr, green!60!black] (foundational.north) -- node[right, text=green!55!black] {uses} (6,-3.3);
+
+    \node at (-0.05,-3.55) {\includegraphics[width=1.15cm]{uploads/isabelle_transparent.png}};
+    \node at (10.15,-3.55) {\includegraphics[width=1.15cm]{uploads/isabelle_transparent.png}};
+  \end{tikzpicture}
+  \caption{The Boogie verifier translate an input program to a VC.
+  The proof generation module in the verifier, embeds both of them in Isabelle.
+  Additionally, it generates a proof showing
+  that the validity of the VC implies the correctness of the input program, defined by the foundational formal semantics.
+  Adapted from \cite{parthasarathy2021formally}}
+  \label{fig:proofgen-pipeline}
+\end{figure}
+
+
 
 \paragraph{VC Structure}
 \label{sec:vc-structure}
 % TODO cite correctly
-"The generated VC has the following overall structure (represented as a shallow embedding in our certificates):" ~\cite{parthasarathy2021formally}
+Let's look at the overall structure of the Isabelle embedding of the generated VC,
+adapted from the prior work ~\cite{parthasarathy2021formally}:
 
-
-% TODO cite correctly, modified from Gaurav paper
 \[
 \forall
 \underbrace{\textit{VC quantifiers}}_{\substack{
@@ -170,146 +397,349 @@ We build on the approach by Parthasarathy et al.~\cite{parthasarathy2021formally
 \Bigr)
 \]
 
-\begin{verbatim}
-  - to get the WP, we need our semantics to fulfill LHS
-\end{verbatim}
+So we have an implication, telling us that a modelling,
+that fulfills certain assumptions, imply a weakest precondition.
+This weakest precondition is an essential part to show the correcteness of our input program.
+Therefore, it is necessary, that our formal semantic modelling of Boogie,
+fulfills these example.
+Thus this also gives us some formal goals the semantics should strive for.
 
-\subsection{Semantics of Boogie}
 
-\begin{verbatim}
-  - general (models procedural language)
-  - free ensures
-\end{verbatim}
+\subsection{Type Encoding \& Map Extensionality}
 
-\subsection{Semantics of Boogie Maps}
-\label{sec:semantics-boogie-maps}
-% TODO move to introduction?
-
-We begin by illustrating how maps are used in Boogie.
+Boogie has three different way of encoding of types in polymorphic programs,
+as can be seen if we run \texttt{boogie /help}
 
 \begin{verbatim}
-procedure simple ()
-{
-    var y: int;
-    var a: [int] int;
-    var b: [int] int;
-    
-    y := a[0];       // select
-    a := a[2 := 1];  // store and return a new map
-    a[2] := 1;       // convenient syntax for the above
-
-    // lambda expression
-    a := (lambda x: int :: if x > 0 then y + x + x else y + x);
-    b := (lambda x: int :: if x < 0 then y + x     else y + x + x);
-  
-    assert a == b;
-}
-
+/typeEncoding:<t>
+  Encoding of types when generating VC of a polymorphic program:
+      m = monomorphic (default)
+      p = predicates
+      a = arguments
+  Boogie automatically detects monomorphic programs and enables
+  monomorphic VC generation, thereby overriding the above option.
+  If the latter two options are used, then arrays are handled via axioms.
 \end{verbatim}
 
+The default has changed over time from predicate to monomorphic type encoding.
+\footnote{https://github.com/boogie-org/boogie/pull/732}
+The prior work was build, when the default was the predicate type encoding,
+and works better with that type encoding.
+According to the README of the prior work
+\footnote{https://github.com/viperproject/boogie-proofgen/?tab=readme-ov-file\#supported-subset},
+it does not support type declarations without predicate type encoding,
+as they are encoded differently in the VC.
+
+To force the predicate type encoding, one for one use the flag \texttt{/typeEncoding:p}
+and have polymorphic code in the input.
+If none is existence, one may add \texttt{function dummy<T>(x: T) : T;},
+which does not have to be used anywhere.
+Otherwise, the Boogie verifier overrides that type encoding option and monorphizes the types, as mentioned above in the help message.
 
 
+The type encoding also have a huge effect on the VC encoding of maps, even if they are monomorphic.
+One important difference is, that monomorphic type encoding allows maps to be modeled with SMT arrays.
+Since SMT arrays are extensional, then follows than in this case Boogie maps are extensional as well.
+\footnote{
+This is one of the outdated facts in the "This is Boogie 2"~\cite{leino2008boogie},
+wher it claims that maps are not guaranteed to be extensional.}
+Extensionality means, that we consider two maps equal, if they behave the same,
+i.e. if for all keys in their domain, the select operation results in the same return value.
 
-% TODO // adapted from https://ethz.ch/content/dam/ethz/special-interest/infk/chair-program-method/pm/documents/Education/Courses/SS2017/Program%20Verification/08-Boogie.pdf
 
-With the syntax \texttt{var m:[K] V}, we can declare a map
-with domain type \texttt{K} and codomain type \texttt{V}.
-Using a map, we can select a value at a given key
-and obtain an updated map by storing a new value at a corresponding key.
+\subsection{Boogie Map VC Predicate Encodings}
+\label{sec:vc-axioms-changes}
 
-Interestingly, lambda expressions can be treated as maps.
-Thus, a map behaves like a function that is a first-class value and may be updated.
-Importantly, it is \textbf{not} like a dictionary or an association list,
-as those are usually finite mappings.
+Supporting maps changes the VC, as discussed in Section~\ref{sec:vc-structure}.
+It introduces additional functions and axioms for map types and map behaviors.
+To utilize the VC conclusion (the weakest precondition),
+we must first satisfy the antecedent.
+This yields the formal goals that our map semantics must satisfy.
 
-There are more complex map types.
-They can have multiple keys, which we then call multi-arity maps.
-According to this source [TODO ref], they are discouraged.
-The domain and codomain types can themselves be map types,
-thus enabling nested map types.
+\[
+\forall
+\underbrace{\textit{VC quantifiers}}_{\substack{
+  \text{type encoding parameters,}\\
+  \text{functions, variable values}\\
+  \textbf{map types \& functions}}}
+\mathpunct{.}\;
+\Bigl(
+\underbrace{\textit{VC assumptions}}_{\substack{
+  \text{type encoding,}\\
+  \text{fun./var./prog. axioms}\\
+  \textbf{map axioms}}}
+\Longrightarrow
+\textit{WP}
+\Bigr)
+\]
+
+These axioms differ significantly across type encodings.
+Since the preceding work was built on the polymorphic type encoding,
+we will focus on its specific encoding of maps.
+
+
+\paragraph{VC Map Axioms} \mbox{}\\
+\label{sec:vc-map-axioms}
+
+\newcommand{\MapType}{\operatorname{MapType}}
+\newcommand{\MapTypeInvK}{\operatorname{MapTypeInv0}}
+\newcommand{\MapTypeInvV}{\operatorname{MapTypeInv1}}
+\newcommand{\Select}{\operatorname{MapSelect}}
+\newcommand{\Store}{\operatorname{MapStore}}
+\newcommand{\type}{\operatorname{type}}
+
+Here are the map-relevant portions of the VC.
+
+We have sorts $U$ and $T$, where $U$ represents values, and $T$ represents types.
+We also have a function $type : U \rightarrow T$ that determines the type of a value.
+There are also the following functions:
+\footnote{We have simplified the axioms for clarity.}
+\begin{itemize} 
+  \item $\Select : (U, U) \rightarrow U$, selecting from a map
+  \item $\Store : (U, U, U) \rightarrow U$, updating a map
+  \item $\MapType : (T, T) \rightarrow T$, constructing a map type from two types
+  \item $\MapTypeInvK : T \rightarrow T$, extracting the domain type
+  \item $\MapTypeInvV : T \rightarrow T$, extracting the codomain type
+\end{itemize} 
+
+Notably, these functions apply to \emph{all} values, not just map values.
+
+These functions must satisfy the following axioms:
+
+\begin{align*}
+  & \forall\ k\ v.\ \MapTypeInvK\ (\MapType\ k\ v) = k\\
+  & \forall\ k\ v.\ \MapTypeInvV\ (\MapType\ k\ v) = v
+\end{align*}
+
+These guarantee that $\MapTypeInvK$ and $\MapTypeInvV$ act as true inverse functions of the map type constructor $\MapType$.
+
+\begin{equation}
+  \label{ax:map-select-typesafe}
+  \begin{aligned}
+    \forall \ m \ k. \ 
+    \type \ m = \MapType \ (\type \ k) \ (\MapTypeInvV \ (\type \ m)) \\
+    \implies  \type \ (\Select \ m \ k) = \MapTypeInvV \ (\type \ m)
+  \end{aligned}
+\end{equation}
+
+If we select from a map using the correct domain type,
+the result must be of the corresponding codomain type.
+
+\begin{align*}
+  &\forall \ m \ k \ v. \\
+  &\type m = \MapType\ (\type\ k)\ (\type\ v) \\
+  &\implies  \type(\Store\ m\ k\ v) = \MapType\ (\type\ k)\ (\type\ v)
+\end{align*}
+
+The store operation returns a map of the same type.
+
+\begin{equation}
+  \label{ax:map-update-strong}
+  \begin{aligned}
+    &\forall \ m \ k \ v.\\
+    &\type\ v = \MapTypeInvV\ (\type\ m) \\
+    &\implies  \Select\ (\Store\ m\ k\ v)\ k = v
+  \end{aligned}
+\end{equation}
+
+This confirms that the store behavior accurately corresponds to updating a value at a specific position.
+
+% TODO ref stable
+\begin{align*}
+  &\forall \ m \ x \ y \ v.\\
+  &x = y \ \vee \\
+  &\Select\ (\Store\ m\ x\ v)\ y = \Select\ m\ y
+\end{align*}
+
+This demonstrates that storing a value at a position does not affect the values at other positions.
+
+
+\subsection{SMT and SMT-LIB}
+SMT stands for Satisfiability Modulo Theories \cite{barrett2010smt}.
+It is used to check if a mathematical formual is satisfiable
+under practical practical background theories, which help with modeling common things,
+like arrays or real numbers.
+This format is used to encode the VC output of the Boogie verifier.
+
+There is a standardization for this language, called SMT-LIB.
+One can find more information on the The SMT-LIB Standard paper~\cite{barrett2010smt}.
+There are also some useful online tutorials
+\footnote{https://www.philipzucker.com/z3-rise4fun/guide.html}
+\footnote{https://microsoft.github.io/z3guide/docs/theories/Arrays/}
+\footnote{https://theory.stanford.edu/~nikolaj/programmingz3.html}
+
+
+\subsection{Interactive Theorem Provers (ITP)}
+
+The proof generation produces its certificate in the proof language of Isabelle/HOL.
+This is a Interactive Theorem Prover (ITP).
+Other known ITPs include
+Rocq \cite{huet1997coq} \footnote{https://rocq-prover.org/} or
+Lean \cite{de2015lean} \footnote{https://lean-lang.org/}.
+Such systems help with the construction of mathematical proofs on a computer,
+and check that such mechanized proofs are indeed correct.
+
+\subsubsection{Isabelle/HOL} In contrast to many other ITP,
+Isabelle/HOL is not based on dependent type theory.
+Isabelle itself is a meta framework to build logical systems.
+Isabelle/HOL is such an implementation,
+where HOL stands for higher order logic.
+They do this by combining functional programming
+\footnote{with syntax similar to Haskel} with logic.
+We refer to the extensive tutorial \cite{nipkow2002isabelle} for more information,
+as well as their website \footnote{https://isabelle.in.tum.de/}.
+Here we will shortly explain a few of the less basic features we use for this project:
+
+\paragraph{Sum Type} \footnote{https://isabelle.in.tum.de/library/HOL/HOL/Sum\_Type.html}We can combine two existing types to create a new type.
+For example example \texttt{int + bool} represent the type of integers \emph{and} booleans.
+Both sides then have their own datatype constructors,
+\texttt{Inl} to transform the left type,
+and \texttt{Inr} to transform the right type into the sum type.
+Therefore, \texttt{Inl 42 :: (int + bool)} and \texttt{Inr True :: (int + bool)},
+are both instances of the sum type.
+
+\paragraph{Inductive Definitinos}
+\footnote{Chapter 7 in \cite{nipkow2002isabelle}}
+Inductive definitions are predicates, that describe only the postivie case.
+In a sense, they allow as to mark something as true, if its buid from previous truhts.
+This is especially useful, if we do not care about the negative case, and if they are hard to describe.
+
+Let's say we want define describing if a number reaches one according to the collatz conjecture rules.
 
 \begin{verbatim}
-procedure complex ()
-{
-    var y: int;
-    var a: [int] int;
-    var d: [ [int]int, int ] int;   // multi-arity
-    var c: [ [int]int ] [int] int;  // curried
-    
-    c[a][y] := y;
-    d[a, y] := y;
-}
+(* invalid definition *)
+fun ends where
+  "ends 1 = True" |
+  "ends n = (if (even n) then ends(n div 2) else ends(3*n + 1))"
 \end{verbatim}
 
-
-Maps can also be polymorphic, i.e. have a type parameter:
-% TODO discourages in future? TODO ref?
-
-\begin{verbatim}  
-procedure poly ()
-{
-    var p: <S>[S]S;
-    p[0] := 1;
-    p[true] := false;
-    p[p] := p; 
-    // impredicative polymorphism, recursive types
-}
-\end{verbatim}
-
-This is a powerful feature whose support is outside the scope of this thesis,
-as outlined in our goals (\ref{sec:goals-to-support}).
-
-% [TODO ref Boogie manual]\
-% [TODO ref git issue claiming outdated manual]
-https://ethz.ch/content/dam/ethz/special-interest/infk/chair-program-method/pm/documents/Education/Courses/SS2017/Program%20Verification/08-Boogie.pdf
-
-\subsection{Type Encoding \& Extensionality [TODO]}
-% TODO move to introduction too?
-% TODO // extensionality: works only with monomorphic type encoding & SMT-Arrays
-\begin{verbatim}
-  - Boogie has different type encodings: polymorphic, monomorphic and argument [TODO ref]
-  - default changed from polymorphic to monomorphic [TODO ref]
-  - Proofgen is implemented on polymorphic
-  - to use polymorphic: use \texttt{typeencoding:p} flag and include a polymorphic function [TODO example]
-  - type encoding has a huge effect on VC axioms for maps
-  - the semantics is claimed to be non-extensional, but it uses monomorphic encoding and SMT arrays (default)
-
-  https://github.com/boogie-org/boogie/discussions/769
-\end{verbatim}
-
-% \subsubsection{Select [Early Notes]}
-% The primary operation for Boogie maps is the selection of a value associated with a specific key.
-% While similar operations in other contexts are referred to as application (lambda calculus), lookup (Java), or reading (array axioms), [TODO ref to all three?]
-% we adhere to the term \emph{select} to maintain consistency with the Boogie language specification.
-
-% [TODO explain Boogie select semantics informally according to the outdated manual]
-
-\subsection{SMT Array}
+Such a definition is not allowed, as this function is we did not guarantee that it terminates.
+Using an inductive definition, we can build the positive cases from the ground up,
+simliar to a datatype:
 
 \begin{verbatim}
-  
-- TODO [[Master Thesis/Map]] encoding in [[Master Thesis/Isabelle]] [[Master Thesis/Map Encoding]]
-  id:: 692daf31-ce62-4d99-b963-50b1bbdddb1b
-	- solve issue with with custom select?
-	- [[Master Thesis/SMT]] encoding
-		- `res: [int, [int] int ][int] int` to `(declare-fun res () (Array Int (Array Int Int) (Array Int Int)))`
-		- with `select` and `store` functions
-	- [[Master Thesis/SMT]] Array
-		- Resources
-			- https://www.philipzucker.com/z3-rise4fun/guide.html
-				- nicer rendering: https://microsoft.github.io/z3guide/docs/theories/Arrays/
-			- https://theory.stanford.edu/~nikolaj/programmingz3.html#sec-arrays
-		- they seem like dictionaries or maps (potentially unbounded?)
-		- they seem to be modelled as functions
-		- DONE important difference to [[Master Thesis/Boogie]] Maps: Arrays are *extensional*
-			- are equal if they behave the same on all selected indices
-			- but why are boogie maps not extensional when Arrays are?
-				- DONE why does this fail? https://ethz.ch/content/dam/ethz/special-interest/infk/chair-program-method/pm/documents/Education/Courses/SS2017/Program%20Verification/08-Boogie.pdf
-					- it actually verifies
-			- different behaviour with `/useArrayAxioms`
-			- is this an issue for $valid(SMT) \implies ver(BPL)$ ?
-				- not if we make our Boogie semantics stronger (i.e. guarantee extensionality)
+inductive endsInd where
+  base: "endsInd (1::nat)" |
+  two: "endsInd n ==> endsInd (2*n)" |
+  three: "endsInd (3*n+1) ==> endsInd n"
 \end{verbatim}
+
+As one can see, we can recurse on the inductive definition,
+even with quantifiers as will see in our solution later.
+Not all kind of definitions are admissible though,
+for example the recursion may not appear in the negative position:
+
+\begin{verbatim}
+(* invalid definition *)
+inductive even where
+  base: "even 0" |
+  step: "¬ even n ==> even (Suc n)"
+\end{verbatim}
+
+One reason why such a thing is not allowed, is that we cannot show the negative case
+for any number, while defining the property.
+
+
+\paragraph{Locale} \footnote{https://isabelle.in.tum.de/doc/locales.pdf}
+We can set up locale in Isabelle/HOL.
+
+\begin{verbatim}
+locale foo =
+  fixes f :: "nat => nat"
+  fixes x :: nat
+  assumes "f x = x"
+begin
+
+(* ... *)
+
+end
+\end{verbatim}
+
+Then inside this locale, we may refer to the stuff fixed by the locale.
+It even allows us to do assumptions of the fixed stuff.
+
+It we want to extend the locale to other theory files, we may do that with the \texttt{context} command:
+
+\begin{verbatim}
+ontext foo
+begin
+
+(* ... *)
+
+end
+\end{verbatim}
+
+And if we want to use the definitions and proofs from the locale,
+with a specific values, we can instantiate them
+
+\begin{verbatim}
+interpretation foo g 3
+  by (* showing g 3 = 3 *)
+\end{verbatim}
+
+In this case we instantiate \texttt{f} with \texttt{g} and \texttt{x} with \texttt{3}.
+We then have to show that our instantiation fulfills the assumptions from the locale,
+in this case \texttt{f x = x}.
+
+After the interpretation, the definitions are availble, with our instantiated values.
+Also for theories that import the interpreted theory.
+Once interpreted, one cannot interpret again.
+So, one has to make sure of importing everything one wants to to instantiate
+before the interpretation, even if they are used later in other theories,
+as otherwise their contexes would not be instantiated.
+
+
+\paragraph{Type Definitions from Sets}
+\footnote{8.5.2 in \cite{nipkow2002isabelle}}
+
+As mentioned, Isabelle/HOL has not dependent types.
+We still have a functionality to create types, based on other values,
+by turning non-empty sets into types.
+Actually types in Isabelle/HOL are interpreted as non-empty sets\cite{kunvcar2016types}.
+Here is an example:
+
+\begin{verbatim}
+typedef t = "{0::nat, 1, 42, 67}" by auto
+\end{verbatim}
+
+We just have to proof that the set is not empty,
+as all Isabelle/HOL types are defined to be non-empty.
+In fact, we this type definitino is even allowed to depent on a type parameter,
+by adding a \texttt{overloaded} keyword.
+
+\begin{verbatim}
+abbreviation p :: "('a list) set" where
+  "p = {l. ¬ (l = [])}"
+
+typedef (overloaded) 'a tp  = "p :: ('a list) set" by auto
+\end{verbatim}
+
+One thing that we cannot do
+\footnote{Might be possible with this approach\cite{kunvcar2016types}},
+is have the type definition in a locale.
+
+\paragraph{Type Class} \footnote{https://isabelle.in.tum.de/doc/classes.pdf}
+Isabelle allows to add a Haskel-style type class to a type parameter of a class.
+This guarantees, that certain function are available, when instantiating the type,
+similar to an interface in some programming languages.
+
+\begin{verbatim}
+class c =
+  fixes tonat :: "'a => nat"
+
+datatype 'a::c D = Con 'a
+
+instantiation bool :: c begin
+  fun c_bool where "c_bool True = 1" | "c_bool False = 0"
+  instance .. end
+
+term "Con False :: bool D"
+\end{verbatim}
+
+While a locale is more flexible, as it can talk about multiple type parameters and values too,
+the crucual advantage for us is, that a type definition can use a type class in its definition.
+Thus, we are able to create a type, based on other values,
+like for example an inductive definition.
 
 
 \section{Upgrading Boogie}
@@ -741,115 +1171,7 @@ our map semantics must satisfy the \emph{map axioms} of the VC generated by Boog
 \label{sec:type-encoding}
 
 
-
-\subsection{VC axioms changes}
-\label{sec:vc-axioms-changes}
-
-Supporting maps changes the VC, as discussed in Section~\ref{sec:vc-structure}.
-It introduces additional functions and axioms for map types and map behaviors.
-To utilize the VC conclusion (the weakest precondition),
-we must first satisfy the antecedent.
-This yields the formal goals that our map semantics must satisfy.
-
-\[
-\forall
-\underbrace{\textit{VC quantifiers}}_{\substack{
-  \text{type encoding parameters,}\\
-  \text{functions, variable values}\\
-  \textbf{map types \& functions}}}
-\mathpunct{.}\;
-\Bigl(
-\underbrace{\textit{VC assumptions}}_{\substack{
-  \text{type encoding,}\\
-  \text{fun./var./prog. axioms}\\
-  \textbf{map axioms}}}
-\Longrightarrow
-\textit{WP}
-\Bigr)
-\]
-
-These axioms differ significantly across type encodings.
-Since the preceding work was built on the polymorphic type encoding,
-we will focus on its specific encoding of maps.
-
-
-\paragraph{VC Map Axioms} \mbox{}\\
-\label{sec:vc-map-axioms}
-
-\newcommand{\MapType}{\operatorname{MapType}}
-\newcommand{\MapTypeInvK}{\operatorname{MapTypeInv0}}
-\newcommand{\MapTypeInvV}{\operatorname{MapTypeInv1}}
-\newcommand{\Select}{\operatorname{MapSelect}}
-\newcommand{\Store}{\operatorname{MapStore}}
-\newcommand{\type}{\operatorname{type}}
-
-Here are the map-relevant portions of the VC.
-
-We have sorts $U$ and $T$, where $U$ represents values, and $T$ represents types.
-We also have a function $type : U \rightarrow T$ that determines the type of a value.
-There are also the following functions:
-\footnote{We have simplified the axioms for clarity.}
-\begin{itemize} 
-  \item $\Select : (U, U) \rightarrow U$, selecting from a map
-  \item $\Store : (U, U, U) \rightarrow U$, updating a map
-  \item $\MapType : (T, T) \rightarrow T$, constructing a map type from two types
-  \item $\MapTypeInvK : T \rightarrow T$, extracting the domain type
-  \item $\MapTypeInvV : T \rightarrow T$, extracting the codomain type
-\end{itemize} 
-
-Notably, these functions apply to \emph{all} values, not just map values.
-
-These functions must satisfy the following axioms:
-
-\begin{align*}
-  & \forall\ k\ v.\ \MapTypeInvK\ (\MapType\ k\ v) = k\\
-  & \forall\ k\ v.\ \MapTypeInvV\ (\MapType\ k\ v) = v
-\end{align*}
-
-These guarantee that $\MapTypeInvK$ and $\MapTypeInvV$ act as true inverse functions of the map type constructor $\MapType$.
-
-\begin{equation}
-  \label{ax:map-select-typesafe}
-  \begin{aligned}
-    \forall \ m \ k. \ 
-    \type \ m = \MapType \ (\type \ k) \ (\MapTypeInvV \ (\type \ m)) \\
-    \implies  \type \ (\Select \ m \ k) = \MapTypeInvV \ (\type \ m)
-  \end{aligned}
-\end{equation}
-
-If we select from a map using the correct domain type,
-the result must be of the corresponding codomain type.
-
-\begin{align*}
-  &\forall \ m \ k \ v. \\
-  &\type m = \MapType\ (\type\ k)\ (\type\ v) \\
-  &\implies  \type(\Store\ m\ k\ v) = \MapType\ (\type\ k)\ (\type\ v)
-\end{align*}
-
-The store operation returns a map of the same type.
-
-\begin{equation}
-  \label{ax:map-update-strong}
-  \begin{aligned}
-    &\forall \ m \ k \ v.\\
-    &\type\ v = \MapTypeInvV\ (\type\ m) \\
-    &\implies  \Select\ (\Store\ m\ k\ v)\ k = v
-  \end{aligned}
-\end{equation}
-
-This confirms that the store behavior accurately corresponds to updating a value at a specific position.
-
-% TODO ref stable
-\begin{align*}
-  &\forall \ m \ x \ y \ v.\\
-  &x = y \ \vee \\
-  &\Select\ (\Store\ m\ x\ v)\ y = \Select\ m\ y
-\end{align*}
-
-This demonstrates that storing a value at a position does not affect the values at other positions.
-
-
-\paragraph{Our VC antecedent change} \mbox{}\\
+\subsection{Our VC antecedent change} \mbox{}\\
 \label{sec:our-vc-change}
 
 The current axiom governing map updates \eqref{ax:map-update-strong}
@@ -875,10 +1197,16 @@ that $m$ is indeed a map, and that the store operation is applied with the appro
 % TODO evaluation
 
 
-\subsection{Extensionality [TODO]}
+\subsection{Extensionality Requirement[TODO]}
 
 Lastly, we require our maps to be extensional. % TODO ref extensionality
 % TODO what is extensional?
+
+\begin{verbatim}
+			- is this an issue for $valid(SMT) \implies ver(BPL)$ ?
+				- not if we make our Boogie semantics stronger (i.e. guarantee extensionality)
+\end{verbatim}
+
 
 % \subsubsection{Why we want extensionality of maps}
 
@@ -1958,6 +2286,8 @@ We have included specific integer and boolean lemmas to verify common, simple us
 A deeper understanding of the existing \texttt{ML} tactics and extending them in a more general, exhaustive manner
 is necessary to increase the verification success rate of generated proofs.
 
+\subsubsection{Non-trivial semantics}
+
 % \subsubsection{Cleaning Up}
 % % Map Semantics
 % % Proof Gen Module
@@ -2177,4 +2507,3 @@ Addressing these unsupported features is the necessary next step toward achievin
 \label{sec:appendix}
 
 \end{document}
-
