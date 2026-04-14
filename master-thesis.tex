@@ -141,29 +141,28 @@ Finally, Section~\ref{sec:conclusion} concludes the thesis.
 
 \subsection{Boogie Language}
 
-\paragraph{Official Resource}
+\paragraph{Official Resources}
+An excellent resource for the Boogie language is the paper by K. Rustan M. Leino \cite{leino2008boogie},
+which is officially linked on the Boogie GitHub page.
+\footnote{https://github.com/boogie-org/boogie}
+Unfortunately, the paper is no longer entirely up-to-date with the modern development of the language.
+\footnote{https://boogie-docs.readthedocs.io/en/latest/LangRef.html\#inconsistent-assumptions}\textsuperscript{,}
+\footnote{https://github.com/dafny-lang/dafny/issues/4005\#issuecomment-1570363166}
+Nevertheless, it remains a solid starting point, as it is the most comprehensive reference available.
 
-A good resource for the boogie language is the paper by K. Rustan M. Leino \cite{leino2008boogie}, describing the language,
-which is also offically linked on their GitHub page
-\footnote{https://github.com/boogie-org/boogie}.
-Unfortunately, it seems that it is not up-to-date with the development of the langauge
-\footnote{https://boogie-docs.readthedocs.io/en/latest/LangRef.html\#inconsistent-assumptions}
-\footnote{https://github.com/dafny-lang/dafny/issues/4005\#issuecomment-1570363166}.
-It is still a good basis to start from, as it seems to be the most complete reference we found.
-
-\paragraph{Boogie} This language is similar in style of Viper and Dafny,
-but with less higher-level features.
-It resembels a procedural language,
-with assignements, control-flow statements (\texttt{if}, \texttt{while}, \texttt{goto}),
-side-effect free functions and procedures, which may be polymorphic.
-Being an IVL, it also has \texttt{assume}, \texttt{assert}, \texttt{axiom} statements, that way also use quantifiers.
-These are for encoding the specification to define what the correct intended behaviour of the program should be.
-We will not delve into too much into the details of the language.
-We refere interested readers to the resources pointed before.
-Here is an example to get a feeling for the language:
+\paragraph{Boogie} 
+This language is similar in style to Viper and Dafny, but it includes fewer high-level features.
+It resembles a procedural language, featuring assignments, control-flow statements (\texttt{if}, \texttt{while}, \texttt{goto}),
+and side-effect-free functions and procedures, which may be polymorphic.
+As an Intermediate Verification Language (IVL), it also includes \texttt{assume}, \texttt{assert},
+and \texttt{axiom} statements that may utilize quantifiers.
+These constructs are used to encode specifications that define the intended correct behavior of the program.
+We will not delve too deeply into the specific details of the language here,
+but rather refer interested readers to the resources mentioned earlier.
+The following example provides a sense of the language's syntax:
 
 \begin{verbatim}
-// code inspired from Dafny's encoding
+// code inspired by Dafny's encoding
 
 type Array _ _;
 function lookup<Dom, Ran> (a: Array Dom Ran, i: Dom) : Ran;
@@ -215,38 +214,39 @@ procedure foo() returns (b: Box)
 }
 \end{verbatim}
 
-\paragraph{Polymorphic}
-We can see, that the function \texttt{lookup} has type parameters between \texttt{<>},
-meaning it is a polymorphic function.
+\paragraph{Polymorphism}
+As seen in the example, the function \texttt{lookup} includes type parameters enclosed in \texttt{<>},
+identifying it as a polymorphic function.
 
-\paragraph{Type Declaration and Abstract Values} Boogie allow you to declare new types
-with the \texttt{type} syntax. We will refer to values of these types as \emph{abstract values}.
-The type decleration may take type parmeters, that can be used to create new types with the given instantiation,
-as seen by the example of \texttt{Array}.
+\paragraph{Type Declarations and Abstract Values} 
+Boogie allows users to declare new types using the \texttt{type} syntax.
+We will refer to values of these types as \emph{abstract values}.
+Type declarations may accept type parameters,
+which can be instantiated to construct new types, as demonstrated by the \texttt{Array} example.
 
-\paragraph{Type Synonym}
-The \texttt{type} keyword can also be used to create type synonyms instead of new types.
+\paragraph{Type Synonyms}
+The \texttt{type} keyword can also be used to create type synonyms instead of entirely new types.
 
-\paragraph{Axiom and Quantifiers}
-Boogie allows to introduce global assumption via the \texttt{axiom} keyword.
-That means, we will assume this property holds and disregard any program execution that do not satisfy this axiom.
-Ofter these axioms are used in conjuction with quantifiers like \texttt{forall}.
-This lets one define a property for every value of a certain type.
+\paragraph{Axioms and Quantifiers}
+Boogie allows developers to introduce global assumptions via the \texttt{axiom} keyword.
+This means the verifier assumes the property holds globally and disregards any program executions that violate the axiom.
+Often, these axioms are used in conjunction with quantifiers like \texttt{forall}, 
+enabling the definition of properties that apply to every value of a specified type.
 
-\paragraph{Free}
-We have decorated the procedure \texttt{positive} with the attribute \texttt{free ensures}.
-The latter keyword is used to specify a post-condition of a procedure or function,
-meaning this assertion should hold at the exit of the funciton.
-The first keyword is telling Boogie to not require the assertion checks,
-but you may still use it as an assumption when it is called.
+\paragraph{Free Modifiers}
+In the example, the procedure \texttt{positive} is decorated with the attributes \texttt{free ensures}.
+The \texttt{ensures} keyword specifies a post-condition of a procedure or function, 
+meaning the assertion must hold upon exit.
+The \texttt{free} modifier instructs Boogie to skip verifying the assertion internally,
+while still allowing calling functions to assume it holds.
 
 
 \subsection{Boogie Maps}
 \label{sec:semantics-boogie-maps}
 
-The most relevant language constract for this project are Boogie maps,
-since our contribution is to support them.
-Let's start by illustrating how maps are used in Boogie.
+The most relevant language construct for this project is the Boogie map,
+as formally supporting it forms our core contribution.
+We begin by illustrating how maps can be used in Boogie:
 
 \begin{verbatim}
 procedure simple ()
@@ -267,23 +267,20 @@ procedure simple ()
 }
 \end{verbatim}
 
-With the syntax \texttt{var m:[D] R}, we can declare a map
-with domain type \texttt{R} and range type \texttt{R}.
-Using a map, we can select a value at a given key
-and obtain an updated map by storing a new value at a corresponding key.
+Using the syntax \texttt{var m:[D] R}, one can declare a map with domain type \texttt{D} and codomain (range) type \texttt{R}.
+With a map, developers can select a value at a given key and obtain an updated map by storing a new value at a corresponding key.
+Notably, maps are total and will always return a valid return value for any key with the correct type.
 
-Interestingly, lambda expressions can be treated as maps.
-Thus, a map behaves like a function that is a first-class value and may be updated.
-Importantly, it is \textbf{not} like a dictionary or an association list,
-as those are usually finite mappings.
+Interestingly, lambda expressions can be treated as map values.
+Thus, a map behaves like an extensional function that is treated as a first-class value and can be dynamically updated.
+Importantly, it is \textbf{not} analogous to a dictionary or an association list in standard programming languages, as those represent strictly finite mappings.
 
-There are more complex map types.
-They can have multiple keys, which we then call multi-arity maps.
-The domain and range types can themselves be map types,
-thus enabling nested map types.
-Multi-arity maps are discourage, according to this source
-\footnote{https://boogie-docs.readthedocs.io/en/latest/LangRef.html\#inconsistent-assumptions}.
-They can be transformed into nested single-arity maps.
+Boogie supports more complex map types as well.
+Maps can take multiple keys, referred to as multi-arity maps.
+Furthermore, the domain and codomain types can themselves be maps, enabling nested map structures.
+However, multi-arity maps are generally discouraged according to this documentation,
+\footnote{https://boogie-docs.readthedocs.io/en/latest/LangRef.html\#inconsistent-assumptions}
+as they can be structurally transformed into nested, single-arity maps.
 
 \begin{verbatim}
 procedure complex ()
@@ -298,7 +295,7 @@ procedure complex ()
 }
 \end{verbatim}
 
-Maps can also be polymorphic, i.e. have a type parameters:
+Maps can also be polymorphic, meaning they can accept type parameters:
 
 \begin{verbatim}  
 procedure poly ()
@@ -313,29 +310,29 @@ procedure poly ()
 
 \footnote{Examples taken and adapted from https://ethz.ch/content/dam/ethz/special-interest/infk/chair-program-method/pm/documents/Education/Courses/SS2017/Program\%20Verification/08-Boogie.pdf}
 
-This is a powerful feature whose support is outside the scope of this thesis,
-as outlined in our goals (\ref{sec:goals-to-support}).
+This is a highly powerful feature. However, fully supporting it lies outside the scope of this thesis, as outlined in our goals (Section~\ref{sec:goals-to-support}).
 
 
-\subsection{Prior work by Parthasarathy}
+\subsection{Prior Work by Parthasarathy}
 \label{sec:prior-work}
-We build on the prior work done by Parthasarathy et al.~\cite{parthasarathy2021formally}.
+We build upon the prior work established by Parthasarathy et al.~\cite{parthasarathy2021formally}.
 
-\paragraph{Overall Approach} Proving the implementation of the Boogie verifer would be a hard task.
-It is a large and complex code bsae, that keeps evolving over time.
-So the approach by the prior work was to instead validate individual verification runs.
-Meaning the goal was to show that the validity of the outputed VC implies the correctness of the input program.
+\paragraph{Overall Approach} Proving the complete implementation of the Boogie verifier end-to-end would be a monumental task,
+as it is a large, complex, and constantly evolving codebase.
+Therefore, the approach taken by the prior work is to validate individual verification runs instead.
+The goal is to formally prove that the validity of the outputted Verification Condition (VC)
+mathematically implies the correctness of the input program.
 
-\paragraph{Formal Semantics} We also have to define what it means for a Boogie program to be correct.
-For that need a formal semantics of how Boogie is to behave.
-Since this did not exists before, the work has formalized part of the Boogie semantics
-in a interactive theorem prover, Isabelle/HOL.
+\paragraph{Formal Semantics} To achieve this, we must precisely define what it means for a Boogie program to be "correct".
+This requires formal semantics dictating Boogie's exact behavior.
+Because such a formalization did not previously exist,
+the prior work formalized a core subset of Boogie's semantics within the interactive theorem prover Isabelle/HOL.
 
 \paragraph{Proof Generation Module}
-To generate this proof the work has instrumented the code base of the Boogie verifier.
-This module then produces and embedding of the Boogie program and the VC in Isabelle/HOL.
-It also gathers key information during the translation to be able to produce the desired proof.
-See Figure~\ref{fig:proofgen-pipeline} for an illustrative diagram.
+To generate this proof, the preceding work instrumented the codebase of the Boogie verifier.
+This custom module produces an embedding of both the Boogie program and the VC within Isabelle/HOL.
+It also gathers crucial context during translation to automatically construct the desired proof.
+See Figure~\ref{fig:proofgen-pipeline} for an illustrative diagram of this architecture.
 
 \begin{figure}[t]
   \centering
@@ -366,21 +363,19 @@ See Figure~\ref{fig:proofgen-pipeline} for an illustrative diagram.
     \node at (-0.05,-3.55) {\includegraphics[width=1.15cm]{uploads/isabelle_transparent.png}};
     \node at (10.15,-3.55) {\includegraphics[width=1.15cm]{uploads/isabelle_transparent.png}};
   \end{tikzpicture}
-  \caption{The Boogie verifier translate an input program to a VC.
-  The proof generation module in the verifier, embeds both of them in Isabelle.
-  Additionally, it generates a proof showing
-  that the validity of the VC implies the correctness of the input program, defined by the foundational formal semantics.
-  Adapted from \cite{parthasarathy2021formally}}
+  \caption{The Boogie verifier translates an input program into a VC.
+  The proof generation module embeds both artifacts into Isabelle.
+  Additionally, it generates a proof showing that the validity of the VC implies the correctness of the input program, as defined by the foundational formal semantics.
+  Adapted from \cite{parthasarathy2021formally}.}
   \label{fig:proofgen-pipeline}
 \end{figure}
 
-
-
 \paragraph{VC Structure}
 \label{sec:vc-structure}
+
 % TODO cite correctly
-Let's look at the overall structure of the Isabelle embedding of the generated VC,
-adapted from the prior work ~\cite{parthasarathy2021formally}:
+Let us examine the overall structure of the Isabelle embedding of the generated VC
+(adapted from the prior work \cite{parthasarathy2021formally}):
 
 \[
 \forall
@@ -397,18 +392,17 @@ adapted from the prior work ~\cite{parthasarathy2021formally}:
 \Bigr)
 \]
 
-So we have an implication, telling us that a modelling,
-that fulfills certain assumptions, imply a weakest precondition.
-This weakest precondition is an essential part to show the correcteness of our input program.
-Therefore, it is necessary, that our formal semantic modelling of Boogie,
-fulfills these example.
-Thus this also gives us some formal goals the semantics should strive for.
+This structure forms a logical implication:
+a model fulfilling a specific set of assumptions implies a Weakest Precondition (WP).
+This weakest precondition is essential for demonstrating the correctness of the input program.
+Therefore, our formal semantic modeling of Boogie must rigorously satisfy these assumptions,
+providing clear formal targets that the semantics must achieve.
 
 
 \subsection{Type Encoding \& Map Extensionality}
 
-Boogie has three different way of encoding of types in polymorphic programs,
-as can be seen if we run \texttt{boogie /help}
+Boogie provides three different ways to encode types in polymorphic programs,
+as detailed by the \texttt{boogie /help} command:
 
 \begin{verbatim}
 /typeEncoding:<t>
@@ -421,40 +415,38 @@ as can be seen if we run \texttt{boogie /help}
   If the latter two options are used, then arrays are handled via axioms.
 \end{verbatim}
 
-The default has changed over time from predicate to monomorphic type encoding.
+Over time, the default setting has changed from predicate to monomorphic type encoding.
 \footnote{https://github.com/boogie-org/boogie/pull/732}
-The prior work was build, when the default was the predicate type encoding,
-and works better with that type encoding.
-According to the README of the prior work
-\footnote{https://github.com/viperproject/boogie-proofgen/?tab=readme-ov-file\#supported-subset},
-it does not support type declarations without predicate type encoding,
-as they are encoded differently in the VC.
+The preceding work was built when predicate type encoding was the default,
+and it functions best under this configuration.
+According to the documentation of the prior work,
+\footnote{https://github.com/viperproject/boogie-proofgen/?tab=readme-ov-file\#supported-subset}
+it does not support type declarations under other encodings,
+as they fundamentally alter the structure of the resulting VC.
 
-To force the predicate type encoding, one for one use the flag \texttt{/typeEncoding:p}
-and have polymorphic code in the input.
-If none is existence, one may add \texttt{function dummy<T>(x: T) : T;},
-which does not have to be used anywhere.
-Otherwise, the Boogie verifier overrides that type encoding option and monorphizes the types, as mentioned above in the help message.
+To force predicate type encoding, one must use the flag \texttt{/typeEncoding:p}
+and ensure polymorphic code exists in the input.
+If no such code exists naturally, one can inject a dummy function
+(e.g., \texttt{function dummy<T>(x: T) : T;}).
+Otherwise, the Boogie verifier will override the command-line option and forcefully monomorphize the types.
 
-
-The type encoding also have a huge effect on the VC encoding of maps, even if they are monomorphic.
-One important difference is, that monomorphic type encoding allows maps to be modeled with SMT arrays.
-Since SMT arrays are extensional, then follows than in this case Boogie maps are extensional as well.
-\footnote{
-This is one of the outdated facts in the "This is Boogie 2"~\cite{leino2008boogie},
-wher it claims that maps are not guaranteed to be extensional.}
-Extensionality means, that we consider two maps equal, if they behave the same,
-i.e. if for all keys in their domain, the select operation results in the same return value.
+The chosen type encoding also profoundly impacts the VC representation of maps,
+even if those maps are monomorphic.
+A key difference is that the monomorphic type encoding allows maps to be modeled directly via SMT arrays.
+Because SMT arrays are inherently extensional, it follows that under this encoding, Boogie maps are extensional as well.
+\footnote{This contradicts an outdated assertion in the paper "This is Boogie 2" \cite{leino2008boogie}, which claims maps are not guaranteed to be extensional.}
+Extensionality implies that two maps are considered equal if they behave identically,
+meaning if for all keys in their domain, the select operation yields the same return value.
 
 
 \subsection{Boogie Map VC Predicate Encodings}
 \label{sec:vc-axioms-changes}
 
-Supporting maps changes the VC, as discussed in Section~\ref{sec:vc-structure}.
-It introduces additional functions and axioms for map types and map behaviors.
-To utilize the VC conclusion (the weakest precondition),
-we must first satisfy the antecedent.
-This yields the formal goals that our map semantics must satisfy.
+Supporting maps introduces additional functions and axioms to the VC,
+governing map types and behaviors.
+These axioms differ significantly depending on the type encoding used.
+Since the prior work relies on polymorphic type encoding,
+we focus strictly on its specific encoding of maps.
 
 \[
 \forall
@@ -473,13 +465,12 @@ This yields the formal goals that our map semantics must satisfy.
 \Bigr)
 \]
 
-These axioms differ significantly across type encodings.
-Since the preceding work was built on the polymorphic type encoding,
-we will focus on its specific encoding of maps.
 
 
 \paragraph{VC Map Axioms} \mbox{}\\
 \label{sec:vc-map-axioms}
+
+This yields the formal goals that our map semantics must satisfy:
 
 \newcommand{\MapType}{\operatorname{MapType}}
 \newcommand{\MapTypeInvK}{\operatorname{MapTypeInv0}}
@@ -488,30 +479,29 @@ we will focus on its specific encoding of maps.
 \newcommand{\Store}{\operatorname{MapStore}}
 \newcommand{\type}{\operatorname{type}}
 
-Here are the map-relevant portions of the VC.
+The following represents the map-relevant portions of the VC.
 
-We have sorts $U$ and $T$, where $U$ represents values, and $T$ represents types.
-We also have a function $type : U \rightarrow T$ that determines the type of a value.
-There are also the following functions:
-\footnote{We have simplified the axioms for clarity.}
+There are the sorts $U$ and $T$, where $U$ represents values, $T$ represents types,
+and a function $\type : U \rightarrow T$ that determines the type of a given value.
+Additionally, the following functions are introduced:
+\footnote{We have simplified the axioms slightly for clarity.}
 \begin{itemize} 
-  \item $\Select : (U, U) \rightarrow U$, selecting from a map
-  \item $\Store : (U, U, U) \rightarrow U$, updating a map
-  \item $\MapType : (T, T) \rightarrow T$, constructing a map type from two types
-  \item $\MapTypeInvK : T \rightarrow T$, extracting the domain type
-  \item $\MapTypeInvV : T \rightarrow T$, extracting the codomain type
+  \item $\Select : (U, U) \rightarrow U$, selecting a value from a map.
+  \item $\Store : (U, U, U) \rightarrow U$, updating a map.
+  \item $\MapType : (T, T) \rightarrow T$, constructing a map type from two component types.
+  \item $\MapTypeInvK : T \rightarrow T$, extracting the domain type.
+  \item $\MapTypeInvV : T \rightarrow T$, extracting the range type.
 \end{itemize} 
 
-Notably, these functions apply to \emph{all} values, not just map values.
-
-These functions must satisfy the following axioms:
+Notably, these functions technically apply to \emph{all} values in the logic, not just map values.
+They must satisfy the following axioms:
 
 \begin{align*}
   & \forall\ k\ v.\ \MapTypeInvK\ (\MapType\ k\ v) = k\\
   & \forall\ k\ v.\ \MapTypeInvV\ (\MapType\ k\ v) = v
 \end{align*}
 
-These guarantee that $\MapTypeInvK$ and $\MapTypeInvV$ act as true inverse functions of the map type constructor $\MapType$.
+These axioms guarantee that $\MapTypeInvK$ and $\MapTypeInvV$ act as true inverse functions of the map type constructor $\MapType$.
 
 \begin{equation}
   \label{ax:map-select-typesafe}
@@ -522,8 +512,8 @@ These guarantee that $\MapTypeInvK$ and $\MapTypeInvV$ act as true inverse funct
   \end{aligned}
 \end{equation}
 
-If we select from a map using the correct domain type,
-the result must be of the corresponding codomain type.
+This enforces type safety: if we select from a map using a key of the correct domain type,
+the result is guaranteed to be of the corresponding range type.
 
 \begin{align*}
   &\forall \ m \ k \ v. \\
@@ -531,7 +521,7 @@ the result must be of the corresponding codomain type.
   &\implies  \type(\Store\ m\ k\ v) = \MapType\ (\type\ k)\ (\type\ v)
 \end{align*}
 
-The store operation returns a map of the same type.
+This dictates that the store operation returns a new map of the identical type.
 
 \begin{equation}
   \label{ax:map-update-strong}
@@ -542,69 +532,64 @@ The store operation returns a map of the same type.
   \end{aligned}
 \end{equation}
 
-This confirms that the store behavior accurately corresponds to updating a value at a specific position.
+This confirms that the store operation successfully updates the value at a specific position.
 
-% TODO ref stable
 \begin{align*}
   &\forall \ m \ x \ y \ v.\\
   &x = y \ \vee \\
   &\Select\ (\Store\ m\ x\ v)\ y = \Select\ m\ y
 \end{align*}
 
-This demonstrates that storing a value at a position does not affect the values at other positions.
+This stability axiom demonstrates that storing a value at one position
+does not inadvertently alter the values at other positions.
 
 
 \subsection{SMT and SMT-LIB}
 SMT stands for Satisfiability Modulo Theories \cite{barrett2010smt}.
-It is used to check if a mathematical formual is satisfiable
-under practical practical background theories, which help with modeling common things,
-like arrays or real numbers.
+It is a decision problem used to determine whether a mathematical formula is satisfiable under practical background theories,
+which help model common structures such as arrays or real numbers.
 This format is used to encode the VC output of the Boogie verifier.
 
-There is a standardization for this language, called SMT-LIB.
-One can find more information on the The SMT-LIB Standard paper~\cite{barrett2010smt}.
-There are also some useful online tutorials
-\footnote{https://www.philipzucker.com/z3-rise4fun/guide.html}
-\footnote{https://microsoft.github.io/z3guide/docs/theories/Arrays/}
-\footnote{https://theory.stanford.edu/~nikolaj/programmingz3.html}
+The language is standardized as SMT-LIB.
+Extensive documentation can be found in "The SMT-LIB Standard" paper~\cite{barrett2010smt},
+and various online resources provide comprehensive tutorials on writing and evaluating SMT queries.
+\footnote{https://www.philipzucker.com/z3-rise4fun/guide.html}\textsuperscript{,}
+\footnote{https://microsoft.github.io/z3guide/docs/theories/Arrays/}\textsuperscript{,}
+\footnote{https://theory.stanford.edu/\~nikolaj/programmingz3.html}
 
 
-\subsection{Interactive Theorem Provers (ITP)}
+\subsection{Interactive Theorem Provers (ITPs)}
 
-The proof generation produces its certificate in the proof language of Isabelle/HOL.
-This is a Interactive Theorem Prover (ITP).
-Other known ITPs include
-Rocq \cite{huet1997coq} \footnote{https://rocq-prover.org/} or
-Lean \cite{de2015lean} \footnote{https://lean-lang.org/}.
-Such systems help with the construction of mathematical proofs on a computer,
-and check that such mechanized proofs are indeed correct.
+The proof generation module produces its certificates in the proof language of Isabelle/HOL.
+Isabelle/HOL is an Interactive Theorem Prover (ITP).
+Other prominent ITPs include Rocq \cite{huet1997coq}\footnote{https://rocq-prover.org/}
+and Lean \cite{de2015lean}\footnote{https://lean-lang.org/}.
+These systems assist in the mechanical construction of mathematical proofs on a computer
+and rigidly verify that the mechanized proofs are logically sound.
 
-\subsubsection{Isabelle/HOL} In contrast to many other ITP,
-Isabelle/HOL is not based on dependent type theory.
-Isabelle itself is a meta framework to build logical systems.
-Isabelle/HOL is such an implementation,
-where HOL stands for higher order logic.
-They do this by combining functional programming
-\footnote{with syntax similar to Haskel} with logic.
-We refer to the extensive tutorial \cite{nipkow2002isabelle} for more information,
-as well as their website \footnote{https://isabelle.in.tum.de/}.
-Here we will shortly explain a few of the less basic features we use for this project:
+\subsubsection{Isabelle/HOL} 
+In contrast to many other ITPs, Isabelle/HOL is not based on dependent type theory.
+Isabelle itself serves as a generic meta-framework used to build specific logical systems.
+Isabelle/HOL is one such implementation, where HOL stands for Higher-Order Logic.
+It operates by combining functional programming (using Haskell-style syntax) with formal logic.
+We refer the reader to the extensive official tutorial \cite{nipkow2002isabelle}
+and the project website\footnote{https://isabelle.in.tum.de/} for deeper information.
+Here, we briefly introduce a few advanced features utilized heavily throughout this project:
 
-\paragraph{Sum Type} \footnote{https://isabelle.in.tum.de/library/HOL/HOL/Sum\_Type.html}We can combine two existing types to create a new type.
-For example example \texttt{int + bool} represent the type of integers \emph{and} booleans.
-Both sides then have their own datatype constructors,
-\texttt{Inl} to transform the left type,
-and \texttt{Inr} to transform the right type into the sum type.
-Therefore, \texttt{Inl 42 :: (int + bool)} and \texttt{Inr True :: (int + bool)},
-are both instances of the sum type.
+\paragraph{Sum Types}\footnote{https://isabelle.in.tum.de/library/HOL/HOL/Sum\_Type.html}
+We can combine two existing types to create a union type.
+For example, \texttt{int + bool} represents a type that can be either an integer \emph{or} a boolean.
+Both constituent types provide their own datatype constructors:
+\texttt{Inl} injects a value into the left type,
+and \texttt{Inr} injects a value into the right type.
+Therefore, both \texttt{Inl 42 :: (int + bool)} and \texttt{Inr True :: (int + bool)} represent valid instances of this sum type.
 
-\paragraph{Inductive Definitinos}
-\footnote{Chapter 7 in \cite{nipkow2002isabelle}}
-Inductive definitions are predicates, that describe only the postivie case.
-In a sense, they allow as to mark something as true, if its buid from previous truhts.
-This is especially useful, if we do not care about the negative case, and if they are hard to describe.
+\paragraph{Inductive Definitions}\footnote{Chapter 7 in \cite{nipkow2002isabelle}}
+Inductive definitions define predicates by describing only the positive cases.
+They allow us to mark a property as true by building recursively upon previously established truths.
+This is particularly useful when negative cases are difficult to describe directly.
 
-Let's say we want define describing if a number reaches one according to the collatz conjecture rules.
+Consider defining a property that describes whether a number eventually reaches one according to the Collatz conjecture rules:
 
 \begin{verbatim}
 (* invalid definition *)
@@ -613,21 +598,19 @@ fun ends where
   "ends n = (if (even n) then ends(n div 2) else ends(3*n + 1))"
 \end{verbatim}
 
-Such a definition is not allowed, as this function is we did not guarantee that it terminates.
-Using an inductive definition, we can build the positive cases from the ground up,
-simliar to a datatype:
+Such a direct function definition is rejected by Isabelle, as we cannot guarantee termination upfront.
+Instead, using an inductive definition, we can build the positive cases structurally from the ground up:
 
 \begin{verbatim}
-inductive endsInd where
-  base: "endsInd (1::nat)" |
-  two: "endsInd n ==> endsInd (2*n)" |
-  three: "endsInd (3*n+1) ==> endsInd n"
+inductive ends where
+  base: "ends 1" |
+  two: "ends n ==> ends (2*n)" |
+  three: "ends (3*n+1) ==> ends n"
 \end{verbatim}
 
-As one can see, we can recurse on the inductive definition,
-even with quantifiers as will see in our solution later.
-Not all kind of definitions are admissible though,
-for example the recursion may not appear in the negative position:
+As demonstrated, we can recurse smoothly within inductive definitions.
+However, not all structures are admissible.
+Crucially, recursion may not appear in a negative position:
 
 \begin{verbatim}
 (* invalid definition *)
@@ -636,12 +619,11 @@ inductive even where
   step: "¬ even n ==> even (Suc n)"
 \end{verbatim}
 
-One reason why such a thing is not allowed, is that we cannot show the negative case
-for any number, while defining the property.
+Such a structure is prohibited because an inductive definition cannot reason about negative cases
+while the property itself is still actively being defined.
 
-
-\paragraph{Locale} \footnote{https://isabelle.in.tum.de/doc/locales.pdf}
-We can set up locale in Isabelle/HOL.
+\paragraph{Locales}\footnote{https://isabelle.in.tum.de/doc/locales.pdf}
+We can isolate environments by setting up locales in Isabelle/HOL:
 
 \begin{verbatim}
 locale foo =
@@ -650,62 +632,49 @@ locale foo =
   assumes "f x = x"
 begin
 
-(* ... *)
+(* Context-specific definitions and proofs *)
 
 end
 \end{verbatim}
 
-Then inside this locale, we may refer to the stuff fixed by the locale.
-It even allows us to do assumptions of the fixed stuff.
-
-It we want to extend the locale to other theory files, we may do that with the \texttt{context} command:
+Inside this locale, we can refer directly to the fixed constants and make assumptions about them.
+If we wish to extend the locale to other theory files, we utilize the \texttt{context} command:
 
 \begin{verbatim}
-ontext foo
+context foo
 begin
 
-(* ... *)
+(* Extensions *)
 
 end
 \end{verbatim}
 
-And if we want to use the definitions and proofs from the locale,
-with a specific values, we can instantiate them
+To apply the definitions and proofs from the locale to concrete values, we instantiate them:
 
 \begin{verbatim}
 interpretation foo g 3
-  by (* showing g 3 = 3 *)
+  by (* proof showing that g 3 = 3 *)
 \end{verbatim}
 
-In this case we instantiate \texttt{f} with \texttt{g} and \texttt{x} with \texttt{3}.
-We then have to show that our instantiation fulfills the assumptions from the locale,
-in this case \texttt{f x = x}.
+In this case, we instantiate \texttt{f} with \texttt{g} and \texttt{x} with \texttt{3}, discharging the proof obligation that \texttt{f x = x}.
+Following the interpretation, all definitions become available globally with the instantiated values.
+Crucially, a locale can only be interpreted once within a given theory path.
+Therefore, one must ensure all necessary theories are imported prior to interpretation.
+Otherwise, their contexts will remain uninstantiated.
 
-After the interpretation, the definitions are availble, with our instantiated values.
-Also for theories that import the interpreted theory.
-Once interpreted, one cannot interpret again.
-So, one has to make sure of importing everything one wants to to instantiate
-before the interpretation, even if they are used later in other theories,
-as otherwise their contexes would not be instantiated.
-
-
-\paragraph{Type Definitions from Sets}
-\footnote{8.5.2 in \cite{nipkow2002isabelle}}
-
-As mentioned, Isabelle/HOL has not dependent types.
-We still have a functionality to create types, based on other values,
-by turning non-empty sets into types.
-Actually types in Isabelle/HOL are interpreted as non-empty sets\cite{kunvcar2016types}.
-Here is an example:
+\paragraph{Type Definitions from Sets}\footnote{Section 8.5.2 in \cite{nipkow2002isabelle}}
+As previously noted, Isabelle/HOL does not support dependent types.
+However, we can still construct restricted types based on existing values by converting non-empty sets into types.
+In fact, types in Isabelle/HOL are formally interpreted as non-empty sets \cite{kunvcar2016types}.
 
 \begin{verbatim}
 typedef t = "{0::nat, 1, 42, 67}" by auto
 \end{verbatim}
 
-We just have to proof that the set is not empty,
-as all Isabelle/HOL types are defined to be non-empty.
-In fact, we this type definitino is even allowed to depent on a type parameter,
-by adding a \texttt{overloaded} keyword.
+We only need to prove that the defining set is not empty.
+
+The reason it that all Isabelle/HOL types are defined to be non-empty.
+This type definition is even permitted to depend on a type parameter by providing the \texttt{overloaded} keyword:
 
 \begin{verbatim}
 abbreviation p :: "('a list) set" where
@@ -714,14 +683,13 @@ abbreviation p :: "('a list) set" where
 typedef (overloaded) 'a tp  = "p :: ('a list) set" by auto
 \end{verbatim}
 
-One thing that we cannot do
-\footnote{Might be possible with this approach\cite{kunvcar2016types}},
-is have the type definition in a locale.
+A notable limitation of this feature is that \texttt{typedef} commands cannot be used inside a locale context.
+\footnote{Though workarounds may be possible, see \cite{kunvcar2016types}.}
 
-\paragraph{Type Class} \footnote{https://isabelle.in.tum.de/doc/classes.pdf}
-Isabelle allows to add a Haskel-style type class to a type parameter of a class.
-This guarantees, that certain function are available, when instantiating the type,
-similar to an interface in some programming languages.
+\paragraph{Type Classes}\footnote{https://isabelle.in.tum.de/doc/classes.pdf}
+Isabelle allows developers to assign Haskell-style type classes to type parameters.
+This guarantees that specific functions or properties are available when instantiating the type,
+operating similarly to interfaces in standard programming languages.
 
 \begin{verbatim}
 class c =
@@ -731,15 +699,16 @@ datatype 'a::c D = Con 'a
 
 instantiation bool :: c begin
   fun c_bool where "c_bool True = 1" | "c_bool False = 0"
-  instance .. end
+  instance .. 
+end
 
 term "Con False :: bool D"
 \end{verbatim}
 
-While a locale is more flexible, as it can talk about multiple type parameters and values too,
-the crucual advantage for us is, that a type definition can use a type class in its definition.
-Thus, we are able to create a type, based on other values,
-like for example an inductive definition.
+While locales are generally more flexible (accommodating multiple type parameters and arbitrary values),
+type classes offer a crucial advantage for our architecture:
+a \texttt{typedef} can directly leverage a type class constraint in its definition. 
+This allows us to construct robust, globally constrained types predicated upon existing inductive properties.
 
 
 \section{Upgrading Boogie}
