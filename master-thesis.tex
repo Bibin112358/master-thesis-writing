@@ -2345,28 +2345,24 @@ Addressing these unsupported features is the necessary next step toward achievin
 \label{sec:conclusion}
 % Conclusion/Summary
 
-The project was about evolving and extending certificate generatation for a program verifier.
-We build on the prior work of Parthasarathy et al.~\cite{parthasarathy2021formally},
-which build semantic formalization and certificate generation for a core subset of the Boogie language,
-in the proof language of Isabelle/HOL.
-We have evolved it by updating the underlying Boogie code base to the newest version,
-fixing related issues
-and thusenabling the tool to be run and devloped on for future contributions.
-For the extension part, we have analyzed which previously identified features are most relevant for supporting next,
-resulting in supporting maps.
+This project focused on evolving and extending formal certificate generation for a program verifier.
+Building upon the foundational work of Parthasarathy et al.,
+which established a semantic formalization and certificate generator for a core subset of the Boogie language in Isabelle/HOL.
+We first evolved the architecture by updating the underlying Boogie codebase to the latest version, resolving related compatibility issues, and ensuring the tool can be actively run and developed for future contributions.
+Following a systematic analysis to identify the most critical unsupported features, we selected Boogie maps as our primary target for extension.
 
-From there we have designed formal semantics for monomorphic, single-arity Boogie maps
-with finite domain nestings by shallow embedding them to Isabelle functions,
-with custom contrains.
-Showing the possibilities and limitations of shallow embedding functions,
-in contrast to a deeper embedding with expressions and variable binders.
-Our map semantics satisfy extensionality and minimally changed predicate verificatiion condition axioms.
-We extended the proof generation with some rudementary support for maps,
-enabling the first sucessfull verifiable certificate generation,
-showing the validity of our approach.
-Extending proof tactics to support more auto verification of certificate,
-extending the semantics to model more general maps behvaviors,
-such as lambda expressions, arbitrary domain nestings and polymorphic maps remain open challanges for future work.
+Consequently, we designed and implemented formal semantics for monomorphic, single-arity Boogie maps with finite domain nesting.
+We achieved this through a shallow embedding into Isabelle/HOL functions governed by custom well-formedness constraints.
+This approach successfully demonstrates the practical possibilities
+and inherent limitations of shallow embeddings when contrasted
+with deeper embeddings that utilize expressions and explicit variable binders.
+
+Our formalized map semantics guarantee extensionality while requiring only minimal modifications to the predicate verification condition axioms.
+Furthermore, by augmenting the proof generation module with rudimentary support for maps,
+we enabled the first successfully verifiable certificate generation for map-dependent Boogie programs, validating the soundness of our approach.
+While this establishes a robust foundation, extending the proof tactics to automate a broader range of certificate verifications,
+and generalizing the semantics to natively support complex map behaviors,
+such as lambda expressions, arbitrary domain nesting, and polymorphic maps, remain open challenges for future work.
 
 
 \section*{Bibliography}
