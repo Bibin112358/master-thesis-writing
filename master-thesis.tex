@@ -34,16 +34,40 @@ Supervisors: Yushuo Xiao and Prof.~Dr.~Peter M\"uller
 \end{center}
 
 \begin{abstract}
-  Lorem Ipsum TODO
+There are increasing developments in the area of automated program verifiers.
+Often theses verifiers are build by a series of translations from languages
+instrumented with pre- and postconditions, to intermediate verification languages (IVL).
+to verification condition (VC) in the form of 
+the satisfiability of mathematical formulas (SMT).
+Boogie is such a IVL, whos verifier translates it a VC.
+The result of such verifiers rely on their correct implementation,
+for which there are seldom guarantees.
+Prior work has tackled this issue, by generating certificates,
+in the form of mechanized computer proofs, in the proof language of Isabelle/HOL,
+for individual verification runs.
+This work has been done for a core subset of the Boogie language.
+For that they had to instrument the code base of the Boogie verifier.
+Since then Boogie's code base has undergone significant updates.
+Our first contribution is updating the prior work to the new code base.
+Then we have identified Boogie maps as the most significant feature
+to support such a certificate generation.
+The main contribution is desinging the extension of the formal semantics done by the prior work,
+with the semantics for a subset of the features of Boogie maps.
+We have extended the certificate generation and shown, that our approach certifies
+a few new verification runs utilizing Boogie maps.
+We also discuss some advantages and disadvantages of our chosen design,
+and lay out potential future work and alternatives.
 \end{abstract}
 
-
+\pagebreak
 
 \section*{Acknowledgements [TODO]}
 
+\pagebreak
 
 \tableofcontents
 
+\pagebreak
 
 \section{Introduction}
 
@@ -2364,14 +2388,15 @@ While this establishes a robust foundation, extending the proof tactics to autom
 and generalizing the semantics to natively support complex map behaviors,
 such as lambda expressions, arbitrary domain nesting, and polymorphic maps, remain open challenges for future work.
 
+\pagebreak
 
-\section*{Bibliography}
+% Bibliography
 \bibliographystyle{plain}
 \bibliography{references}
+
 \section*{List of figures/tables}
-\section*{Agreements}
-\subsection*{Of Independence}
-\subsection*{AI Usage}
+
+\pagebreak
 
 \appendix
 \section{Appendix}
@@ -2444,5 +2469,12 @@ fun wf_ty :: "'a valn => bool" where
   | "wf_ty (MapV (Inl m)) = wf_L 3 m"
 
 \end{verbatim}
+
+
+\pagebreak
+
+\section*{Agreements}
+\subsection*{Of Independence}
+\subsection*{AI Usage}
 
 \end{document}
