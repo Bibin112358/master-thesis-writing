@@ -53,7 +53,7 @@ Following a usage analysis, we identified Boogie maps as the most critical unsup
 preventing the certification of complex programs from front-ends like Dafny. The primary contribution 
 of this thesis is the design and extension of the formal foundational semantics to support a 
 practical subset of Boogie maps. We extended the certificate generator accordingly and successfully 
-certified verification runs for programs utilizing maps, demonstrating the soundness of our approach. 
+certified verification runs for programs using maps, demonstrating the soundness of our approach. 
 Finally, we discuss the advantages and limitations of our chosen semantic embedding and outline 
 alternative approaches and directions for future work.
 \end{abstract}
@@ -153,7 +153,7 @@ then the input program is guaranteed to be correct as well.
 Providing these foundational guarantees is the primary motivation behind the Viper Roots project.
 \footnote{https://www.pm.inf.ethz.ch/research/roots.html}
 
-There has been significant prior work in this space by Parthasarathy, Gaurav, et al.~\cite{parthasarathy2021formally}, 
+There has been significant prior work in this space by Parthasarathy et al.~\cite{parthasarathy2021formally}, 
 specifically targeting the Boogie-to-SMT segment of the verification pipeline.
 Their approach certifies specific runs of the verifier by generating a machine-checked proof demonstrating that the validity of the SMT output implies the correctness of the Boogie input.
 We explain the relevant components of this architecture in more detail in Section~\ref{sec:prior-work}.
@@ -161,14 +161,14 @@ We explain the relevant components of this architecture in more detail in Sectio
 The prior work established an immense foundation for certifying this translation.
 Unfortunately, it currently only supports a restricted subset of the Boogie language.
 Our goal is to extend this support to more complex features,
-especially those heavily utilized by front-end IVLs such as Viper and Dafny,
+especially those heavily used by front-end IVLs such as Viper and Dafny,
 so they can be fully integrated into the certification pipeline.
 Expanding the supported subset to cover a broader range of real-world Boogie programs forms the core motivation for this project.
 
 
 \subsection{Contributions}
 
-This project achieves the following contributions:
+This project makes the following contributions:
 
 \paragraph{Updating the Codebase.} The previous iteration of the certification pipeline was based on an outdated version of Boogie.
 We updated the architecture and proof generation module to be compatible with a newer release.
@@ -177,12 +177,12 @@ We updated the architecture and proof generation module to be compatible with a 
 
 \paragraph{Map Semantics.} We designed and implemented formal semantics for Boogie maps that successfully support a practical subset of use cases.
 
-\paragraph{Proof Generation.} We implemented rudimentary proof automation and generation capable of certifying Boogie programs that utilize maps. 
+\paragraph{Proof Generation.} We implemented rudimentary proof automation and generation capable of certifying Boogie programs that use maps. 
 This serves as a successful proof of concept for our approach, which we evaluated against a suite of custom test cases.
 
 
 \subsection{Outline}
-The remainder of this report is structured as follows: 
+The remainder of this report is structured as follows.
 Section~\ref{sec:background} introduces the relevant components of the prior work, the Boogie IVL,
 and other foundational technologies used in this project, such as the Isabelle/HOL interactive theorem prover. 
 Section~\ref{sec:upgrading-boogie} details how we updated the codebase and outlines the necessary architectural changes. 
@@ -215,7 +215,7 @@ This language is similar in style to Viper and Dafny, but it includes fewer high
 It resembles a procedural language, featuring assignments, control-flow statements (\texttt{if}, \texttt{while}, \texttt{goto}),
 and side-effect-free functions and procedures, which may be polymorphic.
 As an Intermediate Verification Language (IVL), it also includes \texttt{assume}, \texttt{assert},
-and \texttt{axiom} statements that may utilize quantifiers.
+and \texttt{axiom} statements that may use quantifiers.
 These constructs are used to encode specifications that define the intended correct behavior of the program.
 We will not delve too deeply into the specific details of the language here,
 but rather refer interested readers to the resources mentioned earlier.
@@ -604,7 +604,7 @@ Isabelle/HOL is one such implementation, where HOL stands for Higher-Order Logic
 It operates by combining functional programming (using Haskell-style syntax) with formal logic.
 We refer the reader to the extensive official tutorial \cite{nipkow2002isabelle}
 and the project website\footnote{https://isabelle.in.tum.de/} for deeper information.
-Here, we briefly introduce a few advanced features utilized heavily throughout this project:
+Here, we briefly introduce a few advanced features used heavily throughout this project:
 
 \paragraph{Sum Types}\footnote{https://isabelle.in.tum.de/library/HOL/HOL/Sum\_Type.html}
 We can combine two existing types to create a union type.
@@ -668,7 +668,7 @@ end
 \end{verbatim}
 
 Inside this locale, we can refer directly to the fixed constants and make assumptions about them.
-If we wish to extend the locale to other theory files, we utilize the \texttt{context} command:
+If we wish to extend the locale to other theory files, we use the \texttt{context} command:
 
 \begin{verbatim}
 context foo
@@ -1008,14 +1008,14 @@ and procedures marked with free postconditions.
 
 \subsubsection{Boogie Tests Statistics}
 
-Another test suite to look at are the test inside the Boogie repositor itself
+Another test suite to examine is the set of tests inside the Boogie repository itself
 \footnote{https://github.com/boogie-org/boogie/tree/master/Test}.
 There we have gathered around 700 tests.
 Many of them were either passing the check,
 or failing before the subset checker.
 The most reported problematic features were again maps,
-with 179 occurences.
-The next non-map related problems occured less than 30 times.
+with 179 occurrences.
+The next most frequent non-map-related problems occurred fewer than 30 times.
 
 
 \subsection{Methodology Caveats}
@@ -1075,10 +1075,10 @@ axiom (forall t0: Ty,
 We can already glace a few things from this.
 First, it uses map select and map store, which is to be expected.
 Maps are used with abstract types, such as \texttt{ref, Box, Field}.
-We have 2-arity maps, maps nested in the range and domain.
-We also have an axiom quantifying over all keys of a map, and even maps themeselves.
-This implies, that maps have infinite keys.
-This gives already gives us a list of things we need to support certification of Dafny.
+We have multi-arity maps, as well as maps nested in both the range and the domain.
+We also have an axiom quantifying over all keys of a map, and even over maps themselves.
+This implies that maps have infinite domains.
+This already gives us a list of features we need to support to certify Dafny programs.
 
 Looking at all map usages across all Dafny files,
 we did not see any polymorphic maps.
@@ -1086,8 +1086,8 @@ Supporting this feature would significantly increase the complexity of the devel
 including the handling of \emph{impredicative} maps. % TODO ref Gaurav?
 Also, the nesting levels on the domain seem to be at most one, as is our simple example.
 Nesting on the range type is more popular, for example the type \texttt{[[ref][Field]Box,Box,Box,Box]bool} appears more than 100 times.
-And it seems, that there are tests, with a lot more arity (one map having 300 \texttt{Box} in the range type).
-The names suggest, that the might be used to model structs and classe, which would explain the large amount.
+There also seem to be tests with much higher arity, with one map having 300 \texttt{Box} entries in the range type.
+The names suggest that these may be used to model structs and classes, which would explain the large number.
 
 This gives us a list of things to support for Dafny:
 \begin{itemize}
@@ -1100,9 +1100,9 @@ This gives us a list of things to support for Dafny:
   \item lambda expressions
 \end{itemize}
 
-Notably, Viper uses a similar encoding as Dafny, but uses polymorphic map for its encoding. % TODO ref
-Looking at dafny test folder in the Boogie repository \footnote{https://github.com/boogie-org/boogie/tree/master/Test/dafny},
-it seems that is used polymorphic maps to in the past, but ditched them.
+Notably, Viper uses an encoding similar to Dafny's, but it relies on polymorphic maps. % TODO ref
+Looking at the Dafny test folder in the Boogie repository \footnote{https://github.com/boogie-org/boogie/tree/master/Test/dafny},
+it seems that polymorphic maps were used in the past but were later abandoned.
 \footnote{https://github.com/dafny-lang/dafny/pull/4020}\textsuperscript{,}
 \footnote{https://github.com/dafny-lang/dafny/pull/4597}
 
@@ -1308,7 +1308,7 @@ type_synonym 'a val3210 = "'a val3 + 'a val2 + 'a val1 + 'a val0"
 
 To integrate these stratified levels into the core semantics,
 we extend the primary \texttt{val} datatype with a generic \texttt{MapV} constructor.
-By utilizing a second type parameter, \texttt{'m}, we decouple the value definition from the specific map implementation:
+By using a second type parameter, \texttt{'m}, we decouple the value definition from the specific map implementation:
 \footnote{inspired by the initial attempt of the prior work
 https://github.com/viperproject/foundational-boogie/commit/c00254aa736513b3f243aa71182b44043e36c427}
 
@@ -1431,7 +1431,7 @@ For a map to be well-formed it has to satisfy four properties.
 \subsubsection{Closedness of Select \& Store}
 \label{sec:closed}
 
-If we utilize a constrained type and apply operations like select or store,
+If we use a constrained type and apply operations like select or store,
 the result should be constrained as well; i.e., it must satisfy our desired properties.
 Thus, one fundamental requirement is \texttt{(ALL k. wf k --> wf (selectImpl m k))}.
 \footnote{Assuming we have a suitable definition of \texttt{selectImpl}, which will be introduced in Section~\ref{sec:select}.}
@@ -2006,10 +2006,10 @@ Furthermore, bounded quantifiers in proofs required explicit type constraints (e
 to prevent Isabelle from overly generalizing lemmas with fresh type variables.
 
 On the C\# side, the proof generation module was updated to handle the new map cases.
-Because map type constructors utilize the same VC encoding mechanisms as abstract value constructors under the polymorphic type encoding,
+Because map type constructors use the same VC encoding mechanisms as abstract value constructors under the polymorphic type encoding,
 we introduced specific string-matching logic to isolate constructors prefixed with \texttt{MapType}.
 Finally, the C\# module was updated to generate proof steps that invoke our new map semantics lemmas
-and to utilize the constrained \texttt{'a wf\_val} type.
+and to use the constrained \texttt{'a wf\_val} type.
 
 As mentioned in Section~\ref{sec:our-vc-change}, we needed to weaken one of the map axioms.
 Notably, this modification alters the main Boogie code itself, not just the additional proof generation module.
@@ -2149,7 +2149,13 @@ A notable characteristic of this approach is that the value semantics inherently
 implying that a single, fully uniform semantic definition may not cover all programs.
 
 
-\subsubsection{VC change}
+\subsubsection{VC Change}
+One necessary modification was to adjust the VC map axiom,
+as it was too general for our semantics.
+For the cases we tested, this change made no difference.
+In general, the modified axiom is not weaker for type-safe programs.
+Nevertheless, it may affect the SMT solver's ability to check the VC.
+
 
 \subsubsection{Single-Arity Maps}
 Boogie allows maps to take multiple keys (see Section~\ref{sec:semantics-boogie-maps}).
@@ -2158,7 +2164,7 @@ As previously mentioned, we can systematically transform multi-arity maps into s
 where the range is itself a map that takes the subsequent key.
 We adopted this limitation to make the initial project scope more feasible.
 Early conceptual designs relied on this assumption,
-as it helped ensure that the domain only utilized lower levels
+as it helped ensure that the domain used only lower levels
 and that either the domain or range resided at its maximal potential level.
 
 Using the well-formed type definition and inductive structure described in Section~\ref{sec:wf-definition},
@@ -2222,7 +2228,7 @@ m := (lambda x:int :: if i > 0 then 1 else -1);
 
 \subsubsection{Semantics Based on Types Used in the Input Program}
 
-One initial idea involved collecting all types utilized within the input Boogie program
+One initial idea involved collecting all types used within the input Boogie program
 and using this information to generate custom datatypes specific to the program's map types.
 For example, if a Boogie program used an \texttt{[int]int} map, we would model it directly as an \texttt{int => int} function in Isabelle.
 This stands in contrast to our current approach, which uniformly models all map levels using \texttt{'a val0 => 'a val0} functions
@@ -2339,7 +2345,7 @@ We have manually demonstrated the well-formedness of two specific lambda functio
 
 Demonstrating the well-formedness of these examples highlights the complexity of dealing with stratification, sentinel values, and type safety.
 Future implementations must devise a method to simplify this process and automate both the generation and the corresponding proofs.
-This represents a highly promising avenue for future work.
+This is a highly promising avenue for future work.
 
 \subsubsection{Polymorphic Map Types}
 
@@ -2360,7 +2366,7 @@ The entire proof generation module currently relies on Boogie's polymorphic type
 At the time of the prior work, this was the default encoding;
 however, the default has since switched to monomorphic type encoding.
 Adapting the proof generation to support monomorphic type encoding could significantly benefit map semantics.
-The monomorphic encoding utilizes more restrictive SMT Array Theory axioms in the verification conditions. \ref{sec:type-encoding}
+The monomorphic encoding uses more restrictive SMT Array Theory axioms in the verification conditions (Section~\ref{sec:type-encoding}).
 Leveraging these restrictions could facilitate a simpler formulation of the map semantics, potentially enabling more general map behaviors.
 
 \subsubsection{Addressing Current Limitations}
@@ -2409,7 +2415,7 @@ Consequently, we designed and implemented formal semantics for monomorphic, sing
 We achieved this through a shallow embedding into Isabelle/HOL functions governed by custom well-formedness constraints.
 This approach successfully demonstrates the practical possibilities
 and inherent limitations of shallow embeddings when contrasted
-with deeper embeddings that utilize expressions and explicit variable binders.
+with deeper embeddings that use expressions and explicit variable binders.
 
 Our formalized map semantics guarantee extensionality while requiring only minimal modifications to the predicate verification condition axioms.
 Furthermore, by augmenting the proof generation module with rudimentary support for maps,
