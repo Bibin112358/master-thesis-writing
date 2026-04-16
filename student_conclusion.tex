@@ -1,0 +1,18 @@
+
+\chapter{Conclusion}
+\label{ch:conclusion}
+
+In this thesis, we presented a randomized selection algorithm for identifying the median of an unsorted array in expected linear time. Our method hinges on sampling a sublinear number of elements, sorting them to obtain pivots, and then “zooming in” on a small region of the array that is guaranteed, with high probability, to contain the true median. The crux of our analysis relied on Chebyshev’s inequality, which provided a principled way to bound the probability that our random pivots deviate significantly from the actual median’s rank in the sorted order.
+
+\paragraph{Summary of Contributions.}
+\begin{itemize}
+    \item We introduced a randomized median-finding algorithm that leverages a sample of size roughly \( n^{3/4}\). Through sorting this sample and selecting pivots near its middle, the algorithm narrows down the search space to a sub-array whose size is no more than \(4n^{3/4}\).
+    \item We proved a high-probability bound (Theorem~\ref{thm:correctness}) on the correctness of the algorithm. Specifically, with probability at least \(1 - \Oh*{n^{-1/4}}\), our pivots capture the true median, ensuring that the algorithm does not report \emph{failure}.
+    \item We established a near-linear worst-case running time (Theorem~\ref{thm:runningtime}). The cost of sorting the small sample and, conditionally, the sub-array \(T\) both remain asymptotically lower than \Oh*{n}, leaving the dominant cost to be a single pass over the array to compute element ranks relative to the pivots. Hence, the overall algorithm runs in \Oh*{n} time with high probability.
+    \item Beyond the immediate theoretical guarantees, we discussed how to combine our randomized approach with a deterministic “median-of-medians” fallback to handle rare failure events, ensuring correctness remains absolute. This hybrid strategy preserves the practical advantages of randomization while delivering a worst-case linear-time bound.
+\end{itemize}
+
+\paragraph{Limitations and Possible Extensions.}
+While our use of Chebyshev’s inequality is conceptually simple and broadly applicable, tighter concentration results (e.g.\ Chernoff or Hoeffding bounds) could potentially yield smaller failure probabilities or allow an even smaller sample size. However, such refinements might require more specific assumptions about the distribution of the input data or the independence structure of the sampling process.
+
+Another direction for future exploration is to extend the approach to streaming and dynamic settings. In scenarios where the dataset arrives incrementally, maintaining a small, representative sample to approximate the median could be achieved through reservoir sampling or related techniques. Additionally, one might investigate parallel or distributed variants of the algorithm, where the sampling and pivot-selection steps are split across multiple processors or machines.
