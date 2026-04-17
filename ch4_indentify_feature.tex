@@ -39,9 +39,11 @@ From that function we gathered the following limitations
   \item concurrent intermediate verification language (CIVL) features
 \end{itemize}
 
-\paragraph{Exceptions} Another source is to look at \texttt{NotImplementedException} and \texttt{NotSupportedException}
+\paragraph{Exceptions} Another source is to look at
+\lstinline[columns=fixed]{NotImplementedException} and
+\lstinline[columns=fixed]{NotSupportedException}
 in the code of the proof generation.
-From this we gather, that it does not support \texttt{arguments} type encoding,
+From this we gather, that it does not support \lstinline[columns=fixed]{arguments} type encoding,
 declaration free prover context, incarnation on lhs of assignment, and caching of verification results. For brevity we do not explain what all these feature.
 
 This might not be an exhaustive list of all the missing features,
@@ -70,7 +72,7 @@ Then we run this process for all tests and see, which unsupported feature appear
 
 Now we need a suitable test suite.
 We figured, since one motivation is to support Dafny programs, we would test on their test suite.
-For that we first take all the integration tests from the official Dafny repo\footnote{https://github.com/dafny-lang/dafny/tree/master/Source/IntegrationTests} and compile them to Boogie program.
+For that we first take all the integration tests from the official Dafny repo\footnote{\url{https://github.com/dafny-lang/dafny/tree/master/Source/IntegrationTests}} and compile them to Boogie program.
 This resultet in 2002 tests.
 Then we run our little counting tool described above.
 This is our result, ignoring 11 errors (mostly parsing errors):
@@ -94,7 +96,8 @@ This is our result, ignoring 11 errors (mostly parsing errors):
 \end{table}
 
 We can see that all tests use maps, many use lambda expressions,
-quite a sizeable portion \texttt{free} and \texttt{where} clauses on procedures,
+quite a sizeable portion \lstinline[columns=fixed]{free} and
+\lstinline[columns=fixed]{where} clauses on procedures,
 and few use Bitvectors.
 
 
@@ -103,14 +106,14 @@ and few use Bitvectors.
 It is surprising, that all input programs (that reach the subset checker) use maps.
 The reason becomed clear, when one tries to compile a very simple Dafny program:
 
-\begin{verbatim}
+\begin{lstlisting}[caption={Simple Dafny Program}]
 method Succeeds() {
     assert true;
 }
-\end{verbatim}
+\end{lstlisting}
 
-Even this simple program, generates an almost 3000 line long Boogie program, including a map type
-\texttt{type Heap = [ref][Field]Box;}
+Even this simple program, generates an almost 3000 line long Boogie program, including the following map type:
+\lstinline[columns=fixed]{type Heap = [ref][Field]Box;}.
 Even if it is not used, Dafny creates backround theories and models,
 in particular also for their heap modelling, for which they use maps.
 This explains, why maps appear in every test case.
@@ -128,7 +131,7 @@ and procedures marked with free postconditions.
 \subsection{Boogie Tests Statistics}
 
 Another test suite to examine is the set of tests inside the Boogie repository itself
-\footnote{https://github.com/boogie-org/boogie/tree/master/Test}.
+\footnote{\url{https://github.com/boogie-org/boogie/tree/master/Test}}.
 There we have gathered around 700 tests.
 Many of them were either passing the check,
 or failing before the subset checker.
@@ -160,15 +163,17 @@ We want take a closer look, on how maps are used, to see which use cases we shou
 One the one hand we will analyse the Boogie program generated from the simple Dafny program more closely.
 Here are the relevant map parts from the compiler Dafny program:
 
-\begin{verbatim}
+\begin{lstlisting}[caption={Compiled Dafny to Boogie Program Excerpt}]
 type Heap = [ref][Field]Box;
 
-revealed function {:inline} read(H: Heap, r: ref, f: Field) : Box
+revealed function {:inline} read(H: Heap, r: ref, 
+  f: Field) : Box
 {
   H[r][f]
 }
 
-revealed function {:inline} update(H: Heap, r: ref, f: Field, v: Box) : Heap
+revealed function {:inline} update(H: Heap, r: ref, 
+  f: Field, v: Box) : Heap
 {
   H[r := H[r][f := v]]
 }
@@ -183,17 +188,18 @@ axiom (forall t0: Ty,
     rd: [Heap,Box]Set, 
     bx0: Box :: 
   { Apply1(t0, t1, heap, Handle1(h, r, rd), bx0) } 
-  Apply1(t0, t1, heap, Handle1(h, r, rd), bx0) == h[heap, bx0]);
+  Apply1(t0, t1, heap, Handle1(h, r, rd), bx0) 
+    == h[heap, bx0]);
 
 // ...
 
   $_ModifiesFrame := (lambda $o: ref, $f: Field :: 
       $o != null && $Unbox(read($Heap, $o, alloc)): bool ==> false);
-\end{verbatim}
+\end{lstlisting}
 
 We can already glace a few things from this.
 First, it uses map select and map store, which is to be expected.
-Maps are used with abstract types, such as \texttt{ref, Box, Field}.
+Maps are used with abstract types, such as \lstinline[columns=fixed]{ref, Box, Field}.
 We have multi-arity maps, as well as maps nested in both the range and the domain.
 We also have an axiom quantifying over all keys of a map, and even over maps themselves.
 This implies that maps have infinite domains.
@@ -204,8 +210,9 @@ we did not see any polymorphic maps.
 Supporting this feature would significantly increase the complexity of the development, as generics and polymorphism present inherent formalization challenges, % TODO ref
 including the handling of \emph{impredicative} maps. % TODO ref Gaurav?
 Also, the nesting levels on the domain seem to be at most one, as is our simple example.
-Nesting on the range type is more popular, for example the type \texttt{[[ref][Field]Box,Box,Box,Box]bool} appears more than 100 times.
-There also seem to be tests with much higher arity, with one map having 300 \texttt{Box} entries in the range type.
+Nesting on the range type is more popular, for example the type 
+\lstinline[columns=fixed]{[[ref][Field]Box,Box,Box,Box]bool} appears more than 100 times.
+There also seem to be tests with much higher arity, with one map having 300 \lstinline[columns=fixed]{Box} entries in the range type.
 The names suggest that these may be used to model structs and classes, which would explain the large number.
 
 This gives us a list of things to support for Dafny:
@@ -220,10 +227,8 @@ This gives us a list of things to support for Dafny:
 \end{itemize}
 
 Notably, Viper uses an encoding similar to Dafny's, but it relies on polymorphic maps. % TODO ref
-Looking at the Dafny test folder in the Boogie repository \footnote{https://github.com/boogie-org/boogie/tree/master/Test/dafny},
-it seems that polymorphic maps were used in the past but were later abandoned.
-\footnote{https://github.com/dafny-lang/dafny/pull/4020}\textsuperscript{,}
-\footnote{https://github.com/dafny-lang/dafny/pull/4597}
+Looking at the Dafny test folder in the Boogie repository~\footnote{\url{https://github.com/boogie-org/boogie/tree/master/Test/dafny}},
+it seems that polymorphic maps were used in the past but were later abandoned~\footnote{\url{https://github.com/dafny-lang/dafny/pull/4020}}~\textsuperscript{,}~\footnote{\url{https://github.com/dafny-lang/dafny/pull/4597}}
 
 
 
@@ -231,14 +236,15 @@ it seems that polymorphic maps were used in the past but were later abandoned.
 
 Lastly, we require our maps to be extensional.
 A natural question is whether extensionality is strictly necessary.
-There is no explicit axiom in the VC enforcing it.\ref{sec:vc-map-axioms}
+There is no explicit axiom in the VC enforcing it
+(see \Cref{sec:vc-map-axioms}).
 We still argue that this property is important.
 Using the monomorphic type encoding, which defaults to the SMT array theory,
 naturally provides extensionality.
 To remain consistent across different type encodings, maintaining extensionality is desirable.
 
 Another reason is illustrated by the following example:
-\begin{verbatim}
+\begin{lstlisting}[caption={Extensionality Example}]
   var a: [int]int;
   var b: [int]int;
   var m: [[int]int]int;
@@ -252,10 +258,10 @@ Another reason is illustrated by the following example:
   m[b] := 2;
   assert m[a] == 1;  // should never be proven?
   assert m[a] == 2;  // true if extensional
-\end{verbatim}
+\end{lstlisting}
 
-Here we created two maps \texttt{a} and \texttt{b}, that behave the same.
-If \texttt{a} and \texttt{b} would be considered differently in our semantics,
+Here we created two maps \lstinline[columns=fixed]{a} and \lstinline[columns=fixed]{b}, that behave the same.
+If \lstinline[columns=fixed]{a} and \lstinline[columns=fixed]{b} would be considered differently in our semantics,
 then we are able to store a value at each of them.
 Not having extensionality would mean that the answer to the equality question is unknown,
 not that they are considered different.

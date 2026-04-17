@@ -76,7 +76,7 @@ While a constructor like \texttt{bool => 'a val} is permissible, \texttt{'a val 
 To resolve the conflict between recursion and cardinality, we propose an ``explicit unrolling'' of the recursion on the domain.
 This creates a hierarchy of values:
 
-\begin{itemize}[leftmargin=1.5em]
+\begin{itemize}
   \item Level 0: Contains only primitive values: literal and abstract values.
   \item Level 1: Maps with a domain of Level 0 and a range of Level 0 and Level 1.
   \item Level 2: Maps with a domain of Level 0 and Level 1 and a range of Level 0, 1, and 2.
@@ -90,7 +90,8 @@ To ensure the semantics can represent complex, nested Boogie map types,
 it is essential that each level $n$ is cumulative, incorporating all preceding levels.
 This allows the model to support maps where the keys or values are themselves maps of a lower level.
 For instance, representing types such as
-\texttt{[int][[int]int]int} (a map of level 2, with a domain of level 0 and a range of level 2) or \texttt{[[[int]int]int]int} (a map of level 3, with a domain of level 2 and a range of level 0).
+\lstinline[columns=fixed]{[int][[int]int]int} (a map of level 2, with a domain of level 0 and a range of level 2) or
+\lstinline[columns=fixed]{[[[int]int]int]int} (a map of level 3, with a domain of level 2 and a range of level 0).
 
 \begin{figure}[t]
   \centering
@@ -160,7 +161,7 @@ To integrate these stratified levels into the core semantics,
 we extend the primary \texttt{val} datatype with a generic \texttt{MapV} constructor.
 By using a second type parameter, \texttt{'m}, we decouple the value definition from the specific map implementation:
 \footnote{inspired by the initial attempt of the prior work
-https://github.com/viperproject/foundational-boogie/commit/c00254aa736513b3f243aa71182b44043e36c427}
+\url{https://github.com/viperproject/foundational-boogie/commit/c00254aa736513b3f243aa71182b44043e36c427}}
 
 
 \begin{verbatim}
@@ -283,7 +284,7 @@ For a map to be well-formed it has to satisfy four properties.
 
 If we use a constrained type and apply operations like select or store,
 the result should be constrained as well; i.e., it must satisfy our desired properties.
-Thus, one fundamental requirement is \texttt{(ALL k. wf k --> wf (selectImpl m k))}.
+Thus, one fundamental requirement is \isa{(\isasymforall k. wf k --> wf (selectImpl m k))}.
 \footnote{Assuming we have a suitable definition of \texttt{selectImpl}, which will be introduced in Section~\ref{sec:select}.}
 
 We observe that the definition of \texttt{wf} is dependent on the \texttt{wf} of other values.

@@ -75,22 +75,21 @@ procedure foo() returns (b: Box)
 }
 \end{lstlisting}
 
-
-As seen in the example, the function \texttt{lookup} includes type parameters enclosed in \texttt{<>},
+As seen in the example, the function \lstinline[columns=fixed]{lookup} includes type parameters enclosed in \lstinline[columns=fixed]{<>},
 identifying it as a polymorphic function.
-Boogie allows users to declare new types using the \texttt{type} syntax.
+Boogie allows users to declare new types using the \lstinline[columns=fixed]{type} syntax.
 We will refer to values of these types as \emph{abstract values}.
 Type declarations may accept type parameters,
-which can be instantiated to construct new types, as demonstrated by the \texttt{Array} example.
-The \texttt{type} keyword can also be used to create type synonyms instead of entirely new types.
-Boogie allows developers to introduce global assumptions via the \texttt{axiom} keyword.
+which can be instantiated to construct new types, as demonstrated by the \lstinline[columns=fixed]{Array} example.
+The \lstinline[columns=fixed]{type} keyword can also be used to create type synonyms instead of entirely new types.
+Boogie allows developers to introduce global assumptions via the \lstinline[columns=fixed]{axiom} keyword.
 This means the verifier assumes the property holds globally and disregards any program executions that violate the axiom.
-Often, these axioms are used in conjunction with quantifiers like \texttt{forall}, 
+Often, these axioms are used in conjunction with quantifiers like \lstinline[columns=fixed]{forall}, 
 enabling the definition of properties that apply to every value of a specified type.
-In the example, the procedure \texttt{positive} is decorated with the attributes \texttt{free ensures}.
-The \texttt{ensures} keyword specifies a post-condition of a procedure or function, 
+In the example, the procedure \lstinline[columns=fixed]{positive} is decorated with the attributes \lstinline[columns=fixed]{free ensures}.
+The \lstinline[columns=fixed]{ensures} keyword specifies a post-condition of a procedure or function, 
 meaning the assertion must hold upon exit.
-The \texttt{free} modifier instructs Boogie to skip verifying the assertion internally,
+The \lstinline[columns=fixed]{free} modifier instructs Boogie to skip verifying the assertion internally,
 while still allowing calling functions to assume it holds.
 
 
@@ -101,7 +100,7 @@ The most relevant language construct for this project is the Boogie map,
 as formally supporting it forms our core contribution.
 We begin by illustrating how maps can be used in Boogie:
 
-\begin{verbatim}
+\begin{lstlisting}[caption={Simple Boogie Map Example}]
 procedure simple ()
 {
     var y: int;
@@ -110,17 +109,20 @@ procedure simple ()
     
     y := a[0];       // select
     a := a[2 := 1];  // store and return a new map
-    a[2] := 1;       // convenient map assign syntax for the above
+    // convenient map assign syntax for the above
+    a[2] := 1;  
 
     // lambda expression
-    a := (lambda x: int :: if x > 0 then y + x + x else y + x);
-    b := (lambda x: int :: if x < 0 then y + x     else y + x + x);
+    a := (lambda x: int :: 
+      if x > 0 then y + x + x else y + x);
+    b := (lambda x: int ::
+      if x < 0 then y + x     else y + x + x);
   
     assert a == b;
 }
-\end{verbatim}
+\end{lstlisting}
 
-Using the syntax \texttt{var m:[D] R}, one can declare a map with domain type \texttt{D} and range type \texttt{R}.
+Using the syntax \lstinline[columns=fixed]{var m:[D] R}, one can declare a map with domain type \lstinline[columns=fixed]{D} and range type \lstinline[columns=fixed]{R}.
 With a map, developers can select a value at a given key and obtain an updated map by storing a new value at a corresponding key.
 Notably, maps are total and will always return a valid return value for any key with the correct type.
 
@@ -135,7 +137,7 @@ However, multi-arity maps are generally discouraged according to this documentat
 \footnote{https://boogie-docs.readthedocs.io/en/latest/LangRef.html\#inconsistent-assumptions}
 as they can be structurally transformed into nested, single-arity maps.
 
-\begin{verbatim}
+\begin{lstlisting}[caption={Multi-Arity Boogie Map Example}]
 procedure complex ()
 {
     var y: int;
@@ -146,11 +148,11 @@ procedure complex ()
     c[a][y] := y;
     d[a, y] := y;
 }
-\end{verbatim}
+\end{lstlisting}
 
 Maps can also be polymorphic, meaning they can accept type parameters:
 
-\begin{verbatim}  
+\begin{lstlisting}[caption={Polymorphic Boogie Map Example}]
 procedure poly ()
 {
     var p: <S>[S]S;
@@ -159,9 +161,9 @@ procedure poly ()
     p[p] := p; 
     // impredicative polymorphism, recursive types
 }
-\end{verbatim}
+\end{lstlisting}
 
-\footnote{Examples taken and adapted from https://ethz.ch/content/dam/ethz/special-interest/infk/chair-program-method/pm/documents/Education/Courses/SS2017/Program\%20Verification/08-Boogie.pdf}
+\footnote{Examples taken and adapted from \url{https://ethz.ch/content/dam/ethz/special-interest/infk/chair-program-method/pm/documents/Education/Courses/SS2017/Program\%20Verification/08-Boogie.pdf}.}
 
 This is a highly powerful feature. However, fully supporting it lies outside the scope of this thesis, as outlined in our goals (Section~\ref{sec:goals-to-support}).
 
@@ -196,27 +198,29 @@ See Figure~\ref{fig:proofgen-pipeline} for an illustrative diagram of this archi
     proofbox/.style={draw=orange!90!black, very thick, rounded corners=10pt, minimum width=4.2cm, minimum height=0.95cm, align=center}
   ]
     \node[box] (bp) at (0,0) {Boogie Program};
-    \node[box, minimum width=1.7cm] (vc) at (10.2,0) {VC};
+    \node[box, minimum width=1.7cm] (vc) at (9.5,0) {VC};
     \node[sembox] (sem) at (0,-2.7) {Boogie Embedding};
-    \node[sembox, minimum width=1.7cm] (vcemb) at (10.2,-2.7) {VC Embedding};
-    \node[proofbox] (proofgen) at (6.0,-1.15) {boogie-proofgen};
-    \node[sembox, minimum width=3.8cm] (foundational) at (6,-4.55) {Foundational Boogie};
+    \node[sembox, minimum width=1.7cm] (vcemb) at (9.5,-2.7) {VC Embedding};
+    \node[proofbox] (proofgen) at (5.0,-1.15) {boogie-proofgen};
+    \node[sembox, minimum width=3.8cm] (foundational) at (5.9,-4.55) {Foundational Boogie Semantics};
 
     \draw[thinarr, magenta!65!black] (bp.east) -- node[above, text=magenta!65!black, font=\large] {code-to-VC translation} (vc.west);
-    \draw[dasharr, green!60!black] (bp.south) -- node[left, text=black] {embedding} (sem.north);
-    \draw[dasharr, green!60!black] (vc.south) -- node[right, text=black] {embedding} (vcemb.north);
+    \draw[dasharr, green!60!black] (bp.south) -- node[right, text=black] {embedding} (sem.north);
+    \draw[dasharr, green!60!black] (vc.south) -- node[left, text=black] {embedding} (vcemb.north);
     \draw[thick, dashed, orange!90!black] ($(proofgen.north)+(0,0.05)$) -- ++(0,0.6);
-    \draw[dasharr, orange!90!black] ($(proofgen.south)+(0,-0.05)$) -- (6.0,-2.74);
+    \draw[dasharr, orange!90!black] ($(proofgen.south)+(0,-0.05)$) -- (5.0,-2.74);
     \draw[thinarr, green!55!black] (vcemb.west) -- node[below, text=green!55!black, font=\large] {$\mathrm{valid}(VC) \models \mathrm{correct}(BP)$} (sem.east);
-    \draw[thinarr, green!60!black] (foundational.north) -- node[right, text=green!55!black] {uses} (6,-3.3);
+    \draw[thinarr, green!60!black] (foundational.north) -- node[right, text=green!55!black] {uses} (5.9,-3.3);
 
     \node at (-0.05,-3.55) {\includegraphics[width=1.15cm]{uploads/isabelle_transparent.png}};
-    \node at (10.15,-3.55) {\includegraphics[width=1.15cm]{uploads/isabelle_transparent.png}};
+    \node at (9.5,-3.55) {\includegraphics[width=1.15cm]{uploads/isabelle_transparent.png}};
   \end{tikzpicture}
   \caption{The Boogie verifier translates an input program into a VC.
   The proof generation module embeds both artifacts into Isabelle.
   Additionally, it generates a proof showing that the validity of the VC implies the correctness of the input program, as defined by the foundational formal semantics.
-  Adapted from \cite{parthasarathy2021formally}.}
+  Adapted from \cite{parthasarathy2021formally}.
+  Isabelle Logo from https://isabelle.in.tum.de/logo/,
+  contributed by Franziska Wenzel, Munich.}
   \label{fig:proofgen-pipeline}
 \end{figure}
 
@@ -227,7 +231,8 @@ See Figure~\ref{fig:proofgen-pipeline} for an illustrative diagram of this archi
 Boogie provides three different ways to encode types in polymorphic programs,
 as detailed by the \texttt{boogie /help} command:
 
-\begin{verbatim}
+\begin{lstlisting}[language=make, numbers=none,
+caption={\texttt{boogie /help} output}]
 /typeEncoding:<t>
   Encoding of types when generating VC of a polymorphic program:
       m = monomorphic (default)
@@ -236,7 +241,7 @@ as detailed by the \texttt{boogie /help} command:
   Boogie automatically detects monomorphic programs and enables
   monomorphic VC generation, thereby overriding the above option.
   If the latter two options are used, then arrays are handled via axioms.
-\end{verbatim}
+\end{lstlisting}
 
 Over time, the default setting has changed from predicate to monomorphic type encoding.
 \footnote{https://github.com/boogie-org/boogie/pull/732}
@@ -250,7 +255,7 @@ as they fundamentally alter the structure of the resulting VC.
 To force predicate type encoding, one must use the flag \texttt{/typeEncoding:p}
 and ensure polymorphic code exists in the input.
 If no such code exists naturally, one can inject a dummy function
-(e.g., \texttt{function dummy<T>(x: T) : T;}).
+(e.g., \lstinline[columns=fixed]{function dummy<T>(x: T) : T;}).
 Otherwise, the Boogie verifier will override the command-line option and forcefully monomorphize the types.
 
 The chosen type encoding also profoundly impacts the VC representation of maps,
@@ -392,8 +397,9 @@ and various online resources provide comprehensive tutorials on writing and eval
 
 The proof generation module produces its certificates in the proof language of Isabelle/HOL.
 Isabelle/HOL is an Interactive Theorem Prover (ITP).
-Other prominent ITPs include Rocq \cite{huet1997coq}\footnote{https://rocq-prover.org/}
-and Lean \cite{de2015lean}\footnote{https://lean-lang.org/}.
+Other prominent ITPs include Rocq\footnote{https://rocq-prover.org/}
+\cite{huet1997coq}
+and Lean\footnote{https://lean-lang.org/} \cite{de2015lean}.
 These systems assist in the mechanical construction of mathematical proofs on a computer
 and rigidly verify that the mechanized proofs are logically sound.
 
@@ -409,11 +415,11 @@ Here, we briefly introduce a few advanced features used heavily throughout this 
 
 \paragraph{Sum Types}\footnote{https://isabelle.in.tum.de/library/HOL/HOL/Sum\_Type.html}
 We can combine two existing types to create a union type.
-For example, \texttt{int + bool} represents a type that can be either an integer \emph{or} a boolean.
+For example, \isa{int + bool} represents a type that can be either an integer \emph{or} a boolean.
 Both constituent types provide their own datatype constructors:
-\texttt{Inl} injects a value into the left type,
-and \texttt{Inr} injects a value into the right type.
-Therefore, both \texttt{Inl 42 :: (int + bool)} and \texttt{Inr True :: (int + bool)} represent valid instances of this sum type.
+\isa{Inl} injects a value into the left type,
+and \isa{Inr} injects a value into the right type.
+Therefore, both \isa{Inl 42 :: (int + bool)} and \isa{Inr True :: (int + bool)} represent valid instances of this sum type.
 
 \paragraph{Inductive Definitions}\footnote{Chapter 7 in \cite{nipkow2002isabelle}}
 Inductive definitions define predicates by describing only the positive cases.
@@ -487,7 +493,7 @@ interpretation foo g 3
   by (* proof showing that g 3 = 3 *)
 \end{verbatim}
 
-In this case, we instantiate \texttt{f} with \texttt{g} and \texttt{x} with \texttt{3}, discharging the proof obligation that \texttt{f x = x}.
+In this case, we instantiate \isa{f} with \isa{g} and \isa{x} with \isa{3}, discharging the proof obligation that \isa{f x = x}.
 Following the interpretation, all definitions become available globally with the instantiated values.
 Crucially, a locale can only be interpreted once within a given theory path.
 Therefore, one must ensure all necessary theories are imported prior to interpretation.
@@ -505,7 +511,7 @@ typedef t = "{0::nat, 1, 42, 67}" by auto
 We only need to prove that the defining set is not empty.
 
 The reason it that all Isabelle/HOL types are defined to be non-empty.
-This type definition is even permitted to depend on a type parameter by providing the \texttt{overloaded} keyword:
+This type definition is even permitted to depend on a type parameter by providing the \isa{overloaded} keyword:
 
 \begin{verbatim}
 abbreviation p :: "('a list) set" where
@@ -514,7 +520,7 @@ abbreviation p :: "('a list) set" where
 typedef (overloaded) 'a tp  = "p :: ('a list) set" by auto
 \end{verbatim}
 
-A notable limitation of this feature is that \texttt{typedef} commands cannot be used inside a locale context.
+A notable limitation of this feature is that \isa{typedef} commands cannot be used inside a locale context.
 \footnote{Though workarounds may be possible, see \cite{kunvcar2016types}.}
 
 \paragraph{Type Classes}\footnote{https://isabelle.in.tum.de/doc/classes.pdf}
@@ -538,5 +544,5 @@ term "Con False :: bool D"
 
 While locales are generally more flexible (accommodating multiple type parameters and arbitrary values),
 type classes offer a crucial advantage for our architecture:
-a \texttt{typedef} can directly leverage a type class constraint in its definition. 
+a \isa{typedef} can directly leverage a type class constraint in its definition. 
 This allows us to construct robust, globally constrained types predicated upon existing inductive properties.

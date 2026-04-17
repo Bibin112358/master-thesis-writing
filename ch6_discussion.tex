@@ -14,11 +14,11 @@ but do not involve axioms with quantifications.
 
 Here is an example we are currently not able to automatcally certify:
 
-\begin{verbatim}
+\begin{lstlisting}[caption={Non-working test}]
 function dummy<T>(x: T) : T; //to force Boogie not to monomorphize
 
-axiom (forall i: int, m: [int]int :: i > 0 ==> m[i] == 1);
-axiom (forall i: int, m: [int]int :: i <= 0 ==> m[i] == -1);
+axiom (forall i:int, m:[int]int :: i > 0 ==> m[i] == 1);
+axiom (forall i:int, m:[int]int :: i <= 0 ==> m[i] == -1);
 
 procedure p ()
 {
@@ -26,7 +26,7 @@ procedure p ()
     var x: int;
     assert m[x]*m[x] == 1;
 }
-\end{verbatim}
+\end{lstlisting}
 
 \subsection{Newly Supported Boogie Tests}
 
@@ -36,18 +36,19 @@ We used the original tests, rewrote them to avoid the convenient map assign oper
 and run our tool.
 Five of these tests failed. Mostly due to proof tactics failing.
 Some of the tests also require type helper lemmas, that are not yet implemented in the semantics.
-Two managed to verify, \texttt{sum\_of\_arrary} and \texttt{max\_of\_arrary\_v1}.
+Two managed to verify, \texttt{sum\_of\_arrary.bpl} and \texttt{max\_of\_arrary\_v1.bpl}.
 Both are similar, so we will show one of them:
 
-\begin{verbatim}
+\begin{lstlisting}[caption={\texttt{sum\_of\_array.bpl}}]
 function dummy<T>(x: T) : T; //to force Boogie not to monomorphize
 
 // sum of content of a from position to position
 function sum_from_to([int]int, int, int) returns(int);
 axiom ( forall a: [int]int, low, high: int ::
-				high < low   ==>  sum_from_to(a,low,high) == 0 );
+    high < low   ==>  sum_from_to(a,low,high) == 0 );
 axiom ( forall a: [int]int, low, high: int :: high >= low
-    ==>  sum_from_to(a,low,high-1) + a[high] == sum_from_to(a,low,high) );
+    ==> sum_from_to(a,low,high-1) + a[high]
+        == sum_from_to(a,low,high) );
 
 procedure sum (a: [int]int, n: int) returns(s: int)
 	requires n >= 0;
@@ -63,7 +64,7 @@ procedure sum (a: [int]int, n: int) returns(s: int)
 		i := i + 1;
 	}
 }
-\end{verbatim}
+\end{lstlisting}
 
 This shows a more elaborate example,
 with axioms and loop invariants, although only reading from maps.
@@ -75,7 +76,7 @@ In Section~\ref{sec:unsupported-usage} we was, that even the simplest Dafny prog
 generates a large Boogie program.
 Unfortunately, even after having some support for maps is not enough to verify it.
 There are more features missing for that.
-Currently it fails, as \emph{free} procedures are not supported by Proofgen.
+Currently it fails, as \lstinline[columns=fixed]{free} procedures are not supported by Proofgen.
 So one need to either continue working on the next unsupported feature,
 or implement a pruning operation, as not all generated Boogie code is necessary for the Dafny input.
 
@@ -84,7 +85,7 @@ or implement a pruning operation, as not all generated Boogie code is necessary 
 We also ran the existing test suite of the proof generation, that use no maps.
 We want to see, if all our changes broke some existing tests.
 Fortunately, out of the 120 tests that were passing before our changes,
-only one (`Lock.bpl`) is failing after our change.
+only one (\texttt{Lock.bpl}) is failing after our change.
 Investigating this the failure revealed, that there is an issues in the final step,
 with quantification and type parameters.
 This seems like a similar issue described in Section~\ref{sec:adjust-foundational},
@@ -148,7 +149,7 @@ essentially treating the multi-arity syntax as syntactic sugar.
 
 
 \subsection{No Map Assign Statement}
-We currently omit support for Boogie's convenient map assignment syntax (e.g., \texttt{M[x, y] := 1}), as discussed in Section~\ref{sec:semantics-boogie-maps}.
+We currently omit support for Boogie's convenient map assignment syntax (e.g., \lstinline[columns=fixed]{M[x, y] := 1}), as discussed in Section~\ref{sec:semantics-boogie-maps}.
 While this could be resolved via front-end desugaring into standard store operations,
 extending the formal semantics to handle it natively would provide stronger correctness guarantees.
 
@@ -188,17 +189,17 @@ We argue that this is not appropriate for our use case,
 because such a representation cannot capture all lambda expressions,
 for example:
 
-\begin{verbatim}
-var m: [int] int;
-m := (lambda x:int :: if i > 0 then 1 else -1);
-\end{verbatim}
+\begin{lstlisting}[numbers=none]
+var m: [int]int;
+m := (lambda x: int :: if i > 0 then 1 else -1);
+\end{lstlisting}
 
 
 \subsection{Semantics Based on Types Used in the Input Program}
 
 One initial idea involved collecting all types used within the input Boogie program
 and using this information to generate custom datatypes specific to the program's map types.
-For example, if a Boogie program used an \texttt{[int]int} map, we would model it directly as an \texttt{int => int} function in Isabelle.
+For example, if a Boogie program used an \lstinline[columns=fixed]{[int]int} map, we would model it directly as an \texttt{int => int} function in Isabelle.
 This stands in contrast to our current approach, which uniformly models all map levels using \texttt{'a val0 => 'a val0} functions
 (operating over all primitive values) and enforces type safety via a well-formedness invariant.
 
@@ -235,15 +236,15 @@ However, it represents a highly promising avenue for simplifying map semantics i
 For instance, one could model a map as an association list of updates with a fallback function,
 and use quotienting to prove extensional equality between maps that were constructed differently but behave identically:
 
-\begin{verbatim}
-    var a: [int]int;
-    var b: [int]int;
-    a := (lambda x:int :: x+1);
-    a[42] := 42;
-    b := (lambda x:int :: if x == 42 then 42 else x+1);
+\begin{lstlisting}[caption={Two equivalent maps, built different}]
+var a: [int]int;
+var b: [int]int;
+a := (lambda x:int :: x+1);
+a[42] := 42;
+b := (lambda x:int :: if x == 42 then 42 else x+1);
 
-    assert a == b;
-\end{verbatim}
+assert a == b;
+\end{lstlisting}
 
 \subsection{Deep Embedding via Lambda Calculus}
 
@@ -251,8 +252,8 @@ The most theoretically robust alternative is a deep embedding.
 Our chosen solution is a shallow embedding, mapping Boogie maps directly to preexisting Isabelle functions.
 Conversely, a deep embedding would model Boogie maps as expressions featuring explicit variable bindings.
 Boogie maps closely mirror the lambda calculus:
-Map selection (\texttt{m[k]}) corresponds to function application (\texttt{m k}),
-map storage (\texttt{m[k := v]}) corresponds to functional update (\texttt{$\lambda$x. if x = k then v else m x}),
+Map selection (\lstinline[columns=fixed]{m[k]}) corresponds to function application (\texttt{m k}),
+map storage (\lstinline[columns=fixed]{m[k := v]}) corresponds to functional update (\texttt{$\lambda$x. if x = k then v else m x}),
 and lambda expressions map directly to $\lambda$-abstractions.
 With the inclusion of polymorphic map types (Section~\ref{sec:semantics-boogie-maps}), the type system closely resembles System F. % TODO ref
 Therefore, the formal semantics of Boogie maps could be explicitly formalized as an implementation of System F.
@@ -264,7 +265,7 @@ However, to formalize advanced features such as unbounded nesting and impredicat
 A valid theoretical question is why a deep embedding avoids the paradoxes of Cantor's Theorem (Section~\ref{sec:cantor}).
 The resolution lies in the fact that a deep embedding does not represent \emph{every} possible mathematical function in the HOL universe,
 but only those computable functions expressible within the Boogie syntax.
-For example, while the mathematical set of all integer functions (\texttt{[int]bool}) is uncountable,
+For example, while the mathematical set of all integer functions (\lstinline[columns=fixed]{[int]bool}) is uncountable,
 the set of functions constructible by a finite Boogie program is strictly countable.
 \footnote{This assumes standard computable types. The inclusion of uncomputable reals could potentially complicate this, but within the bounds of a program, the expressible space remains constrained.}
 By restricting the semantics to expressible functions, we bypass the cardinality paradoxes inherent in mapping full HOL function spaces to themselves.
@@ -286,7 +287,7 @@ as constraints could be baked directly into the type signatures corresponding to
 
 \subsection{New Boogie Language: B3}
 
-The Dafny development team is currently working on a new intermediate verification language: B3.\footnote{https://github.com/dafny-lang/b3}
+The Dafny development team is currently working on a new intermediate verification language: B3.\footnote{\url{https://github.com/dafny-lang/b3}}
 If B3 ultimately supersedes the current Boogie IVL,
 it raises the question of whether research efforts should pivot toward building foundational verification tools for this new ecosystem.
 While B3 is still in its infancy, and the legacy Boogie IVL repository remains highly active,
@@ -306,10 +307,11 @@ The primary challenge lies in formally proving that the resulting transformation
 while ensuring the intended functional behavior is accurately captured.
 We have manually demonstrated the well-formedness of two specific lambda functions:
 
-\begin{verbatim}
-  (lambda x : int :: x + 1) : [int]int
-  (lambda f : [int]int :: (lambda x : int :: f[x] + 1) ) : [[int]int][int]int
-\end{verbatim}
+\begin{lstlisting}[numbers=none]
+(lambda x : int :: x + 1) : [int]int
+(lambda f : [int]int :: 
+    (lambda x : int :: f[x] + 1) ) : [[int]int][int]int
+\end{lstlisting}
 
 Demonstrating the well-formedness of these examples highlights the complexity of dealing with stratification, sentinel values, and type safety.
 Future implementations must devise a method to simplify this process and automate both the generation and the corresponding proofs.
@@ -359,8 +361,8 @@ An even more robust solution would involve defining a single semantic framework 
 
 A primary motivation for this work (Section~\ref{sec:motivation}) is to enable a foundational verification pipeline capable of processing Dafny programs.
 While we resolved a significant hurdle by formalizing map semantics, other unsupported Boogie features currently prevent the verification of even simple Dafny examples.
-For instance, the proof generation module currently fails when encountering procedures marked with \texttt{free} postconditions.
-Furthermore, several value conversion functions (e.g., converting a \texttt{real} to an \texttt{int}) remain unimplemented.
+For instance, the proof generation module currently fails when encountering procedures marked with \lstinline[columns=fixed]{free} postconditions.
+Furthermore, several value conversion functions (e.g., converting a \lstinline[columns=fixed]{real} to an \lstinline[columns=fixed]{int}) remain unimplemented.
 Addressing these unsupported features is the necessary next step toward achieving fully foundational verification for Dafny programs.
 
 % \subsection{Improve Proofgen code}
