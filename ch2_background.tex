@@ -12,12 +12,12 @@ Unfortunately, the paper is no longer entirely up-to-date with the modern develo
 \footnote{https://github.com/dafny-lang/dafny/issues/4005\#issuecomment-1570363166}
 Nevertheless, it remains a solid starting point, as it is the most comprehensive reference available.
 
-\paragraph{Boogie} 
+\paragraph{Boogie}
 This language is similar in style to Viper and Dafny, but it includes fewer high-level features.
-It resembles a procedural language, featuring assignments, control-flow statements (\texttt{if}, \texttt{while}, \texttt{goto}),
+It resembles a procedural language, featuring assignments, control-flow statements (\lstinline[columns=fixed]{if}, \lstinline[columns=fixed]{while}, \lstinline[columns=fixed]{goto}),
 and side-effect-free functions and procedures, which may be polymorphic.
-As an Intermediate Verification Language (IVL), it also includes \texttt{assume}, \texttt{assert},
-and \texttt{axiom} statements that may use quantifiers.
+As an Intermediate Verification Language (IVL), it also includes \lstinline[columns=fixed]{assume}, \lstinline[columns=fixed]{assert},
+and \lstinline[columns=fixed]{axiom} statements that may use quantifiers.
 These constructs are used to encode specifications that define the intended correct behavior of the program.
 We will not delve too deeply into the specific details of the language here,
 but rather refer interested readers to the resources mentioned earlier.
@@ -84,10 +84,10 @@ which can be instantiated to construct new types, as demonstrated by the \lstinl
 The \lstinline[columns=fixed]{type} keyword can also be used to create type synonyms instead of entirely new types.
 Boogie allows developers to introduce global assumptions via the \lstinline[columns=fixed]{axiom} keyword.
 This means the verifier assumes the property holds globally and disregards any program executions that violate the axiom.
-Often, these axioms are used in conjunction with quantifiers like \lstinline[columns=fixed]{forall}, 
+Often, these axioms are used in conjunction with quantifiers like \lstinline[columns=fixed]{forall},
 enabling the definition of properties that apply to every value of a specified type.
 In the example, the procedure \lstinline[columns=fixed]{positive} is decorated with the attributes \lstinline[columns=fixed]{free ensures}.
-The \lstinline[columns=fixed]{ensures} keyword specifies a post-condition of a procedure or function, 
+The \lstinline[columns=fixed]{ensures} keyword specifies a post-condition of a procedure or function,
 meaning the assertion must hold upon exit.
 The \lstinline[columns=fixed]{free} modifier instructs Boogie to skip verifying the assertion internally,
 while still allowing calling functions to assume it holds.
@@ -106,18 +106,18 @@ procedure simple ()
     var y: int;
     var a: [int] int;
     var b: [int] int;
-    
+
     y := a[0];       // select
     a := a[2 := 1];  // store and return a new map
     // convenient map assign syntax for the above
-    a[2] := 1;  
+    a[2] := 1;
 
     // lambda expression
-    a := (lambda x: int :: 
+    a := (lambda x: int ::
       if x > 0 then y + x + x else y + x);
     b := (lambda x: int ::
       if x < 0 then y + x     else y + x + x);
-  
+
     assert a == b;
 }
 \end{lstlisting}
@@ -144,7 +144,7 @@ procedure complex ()
     var a: [int] int;
     var d: [ [int]int, int ] int;   // multi-arity
     var c: [ [int]int ] [int] int;  // curried
-    
+
     c[a][y] := y;
     d[a, y] := y;
 }
@@ -158,7 +158,7 @@ procedure poly ()
     var p: <S>[S]S;
     p[0] := 1;
     p[true] := false;
-    p[p] := p; 
+    p[p] := p;
     // impredicative polymorphism, recursive types
 }
 \end{lstlisting}
@@ -320,13 +320,13 @@ There are the sorts $U$ and $T$, where $U$ represents values, $T$ represents typ
 and a function $\type : U \rightarrow T$ that determines the type of a given value.
 Additionally, the following functions are introduced:
 \footnote{We have simplified the axioms slightly for clarity.}
-\begin{itemize} 
+\begin{itemize}
   \item $\Select : (U, U) \rightarrow U$, selecting a value from a map.
   \item $\Store : (U, U, U) \rightarrow U$, updating a map.
   \item $\MapType : (T, T) \rightarrow T$, constructing a map type from two component types.
   \item $\MapTypeInvK : T \rightarrow T$, extracting the domain type.
   \item $\MapTypeInvV : T \rightarrow T$, extracting the range type.
-\end{itemize} 
+\end{itemize}
 
 Notably, these functions technically apply to \emph{all} values in the logic, not just map values.
 They must satisfy the following axioms:
@@ -341,7 +341,7 @@ These axioms guarantee that $\MapTypeInvK$ and $\MapTypeInvV$ act as true invers
 \begin{equation}
   \label{ax:map-select-typesafe}
   \begin{aligned}
-    \forall \ m \ k. \ 
+    \forall \ m \ k. \
     \type \ m = \MapType \ (\type \ k) \ (\MapTypeInvV \ (\type \ m)) \\
     \implies  \type \ (\Select \ m \ k) = \MapTypeInvV \ (\type \ m)
   \end{aligned}
@@ -404,7 +404,7 @@ These systems assist in the mechanical construction of mathematical proofs on a 
 and rigidly verify that the mechanized proofs are logically sound.
 
 \subsection{Isabelle/HOL}
-\label{sec:isabelle} 
+\label{sec:isabelle}
 In contrast to many other ITPs, Isabelle/HOL is not based on dependent type theory.
 Isabelle itself serves as a generic meta-framework used to build specific logical systems.
 Isabelle/HOL is one such implementation, where HOL stands for Higher-Order Logic.
@@ -428,33 +428,39 @@ This is particularly useful when negative cases are difficult to describe direct
 
 Consider defining a property that describes whether a number eventually reaches one according to the Collatz conjecture rules:
 
-\begin{verbatim}
-(* invalid definition *)
-fun ends where
-  "ends 1 = True" |
-  "ends n = (if (even n) then ends(n div 2) else ends(3*n + 1))"
-\end{verbatim}
+\begin{isabellebody} \isanewline
+\isakeywordONE{fun}\isamarkupfalse%
+\ ends{\kern0pt}\ \isakeywordTWO{where}\isanewline
+\ \ {\isachardoublequoteopen}ends{\kern0pt}\ {\isadigit{1}}{\kern0pt}\ {\isacharequal}{\kern0pt}\ True{\isachardoublequoteclose}\ {\isacharbar}{\kern0pt}\isanewline
+\ \ {\isachardoublequoteopen}ends{\kern0pt}\ n\ {\isacharequal}{\kern0pt}\ {\isacharparenleft}{\kern0pt}if\ {\isacharparenleft}{\kern0pt}even\ n{\isacharparenright}{\kern0pt}\ then\ ends{\isacharparenleft}{\kern0pt}n\ div\ {\isadigit{2}}{\isacharparenright}{\kern0pt}\ else\ ends{\isacharparenleft}{\kern0pt}{\isadigit{3}}{\isacharasterisk}{\kern0pt}n\ {\isacharplus}{\kern0pt}\ {\isadigit{1}}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+%
+\ \ \ \isamarkupcmt{invalid definition: Could not find lexicographic termination order.}\isanewline
+\end{isabellebody}
+
 
 Such a direct function definition is rejected by Isabelle, as we cannot guarantee termination upfront.
 Instead, using an inductive definition, we can build the positive cases structurally from the ground up:
 
-\begin{verbatim}
-inductive ends where
-  base: "ends 1" |
-  two: "ends n ==> ends (2*n)" |
-  three: "ends (3*n+1) ==> ends n"
-\end{verbatim}
+\begin{isabellebody} \isanewline
+\isakeywordONE{inductive}\isamarkupfalse%
+\ ends\ \isakeywordTWO{where}\isanewline
+\ \ base{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}ends\ {\isadigit{1}}{\isachardoublequoteclose}\ {\isacharbar}{\kern0pt}\isanewline
+\ \ two{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}ends\ n\ {\isacharequal}{\kern0pt}{\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ ends\ {\isacharparenleft}{\kern0pt}{\isadigit{2}}{\isacharasterisk}{\kern0pt}n{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\ {\isacharbar}{\kern0pt}\isanewline
+\ \ three{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}ends\ {\isacharparenleft}{\kern0pt}{\isadigit{3}}{\isacharasterisk}{\kern0pt}n{\isacharplus}{\kern0pt}{\isadigit{1}}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}{\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ ends\ n{\isachardoublequoteclose}\isanewline
+\end{isabellebody}
 
 As demonstrated, we can recurse smoothly within inductive definitions.
 However, not all structures are admissible.
 Crucially, recursion may not appear in a negative position:
 
-\begin{verbatim}
-(* invalid definition *)
-inductive even where
-  base: "even 0" |
-  step: "¬ even n ==> even (Suc n)"
-\end{verbatim}
+\begin{isabellebody} \isanewline
+\isakeywordONE{inductive}\isamarkupfalse%
+\ even\ \isakeywordTWO{where}\isanewline
+\ \ base{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}even\ {\isadigit{0}}{\isachardoublequoteclose}\ {\isacharbar}{\kern0pt}\isanewline
+\ \ step{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isasymnot}even\ n\ {\isacharequal}{\kern0pt}{\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ even\ {\isacharparenleft}{\kern0pt}Suc\ n{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+%
+\ \ \isamarkupcmt{invalid definition: monotonicity proof failed}
+\end{isabellebody}
 
 Such a structure is prohibited because an inductive definition cannot reason about negative cases
 while the property itself is still actively being defined.
@@ -462,36 +468,41 @@ while the property itself is still actively being defined.
 \paragraph{Locales}\footnote{https://isabelle.in.tum.de/doc/locales.pdf}
 We can isolate environments by setting up locales in Isabelle/HOL:
 
-\begin{verbatim}
-locale foo =
-  fixes f :: "nat => nat"
-  fixes x :: nat
-  assumes "f x = x"
-begin
+\begin{isabellebody} \isanewline
+\isakeywordONE{locale}\isamarkupfalse%
+\ foo\ {\isacharequal}{\kern0pt}\isanewline
+\ \ \isakeywordTWO{fixes}\ f\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}nat\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ nat{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{fixes}\ x\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ nat\isanewline
+\ \ \isakeywordTWO{assumes}\ {\isachardoublequoteopen}f\ x\ {\isacharequal}{\kern0pt}\ x{\isachardoublequoteclose}\isanewline
+%
+\isakeywordTWO{begin}\isanewline
+%
+\ \isamarkupcmt{Context-specific definitions and proofs%
+}\isanewline
+\isakeywordTWO{end}\isamarkupfalse%
+\end{isabellebody}
 
-(* Context-specific definitions and proofs *)
-
-end
-\end{verbatim}
 
 Inside this locale, we can refer directly to the fixed constants and make assumptions about them.
-If we wish to extend the locale to other theory files, we use the \texttt{context} command:
+If we wish to extend the locale to other theory files, we use the \isakeywordONE{context} command:
 
-\begin{verbatim}
-context foo
-begin
-
-(* Extensions *)
-
-end
-\end{verbatim}
+\begin{isabellebody}\isanewline
+\isakeywordONE{context}\isamarkupfalse%
+\ foo\isanewline
+\isakeywordTWO{begin}\isanewline
+%
+\ \isamarkupcmt{Locale Extensions}\isanewline
+\isakeywordTWO{end}\isamarkupfalse%
+\end{isabellebody}
 
 To apply the definitions and proofs from the locale to concrete values, we instantiate them:
 
-\begin{verbatim}
-interpretation foo g 3
-  by (* proof showing that g 3 = 3 *)
-\end{verbatim}
+\begin{isabellebody}\isanewline
+\isakeywordONE{interpretation}\isamarkupfalse%
+\ foo\ g\ {\isadigit{3}}\isanewline
+\ \ %
+\isamarkupcmt{proof showing that g 3 = 3}\isanewline
+\end{isabellebody}
 
 In this case, we instantiate \isa{f} with \isa{g} and \isa{x} with \isa{3}, discharging the proof obligation that \isa{f x = x}.
 Following the interpretation, all definitions become available globally with the instantiated values.
@@ -504,21 +515,28 @@ As previously noted, Isabelle/HOL does not support dependent types.
 However, we can still construct restricted types based on existing values by converting non-empty sets into types.
 In fact, types in Isabelle/HOL are formally interpreted as non-empty sets \cite{kunvcar2016types}.
 
-\begin{verbatim}
-typedef t = "{0::nat, 1, 42, 67}" by auto
-\end{verbatim}
+\begin{isabellebody}\isanewline
+\isakeywordONE{typedef}\isamarkupfalse%
+\ t\ {\isacharequal}{\kern0pt}\ {\isachardoublequoteopen}{\isacharbraceleft}{\kern0pt}{\isadigit{0}}{\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}nat{\isacharcomma}{\kern0pt}\ {\isadigit{1}}{\isacharcomma}{\kern0pt}\ {\isadigit{4}}{\isadigit{2}}{\isacharcomma}{\kern0pt}\ {\isadigit{6}}{\isadigit{7}}{\isacharbraceright}{\kern0pt}{\isachardoublequoteclose}%
+\ \isakeywordONE{by}\isamarkupfalse%
+\ auto%
+\end{isabellebody}
 
 We only need to prove that the defining set is not empty.
 
 The reason it that all Isabelle/HOL types are defined to be non-empty.
 This type definition is even permitted to depend on a type parameter by providing the \isa{overloaded} keyword:
 
-\begin{verbatim}
-abbreviation p :: "('a list) set" where
-  "p = {l. ¬ (l = [])}"
-
-typedef (overloaded) 'a tp  = "p :: ('a list) set" by auto
-\end{verbatim}
+\begin{isabellebody}\isanewline
+\isakeywordONE{abbreviation}\isamarkupfalse%
+\ p\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a\ list{\isacharparenright}{\kern0pt}\ set{\isachardoublequoteclose}\ \isakeywordTWO{where}\isanewline
+\ \ {\isachardoublequoteopen}p\ {\isasymequiv}\ {\isacharbraceleft}{\kern0pt}l{\isachardot}{\kern0pt}\ {\isasymnot}\ {\isacharparenleft}{\kern0pt}l\ {\isacharequal}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharbraceright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isakeywordONE{typedef}\isamarkupfalse%
+\ {\isacharparenleft}{\kern0pt}\isakeywordTWO{overloaded}{\isacharparenright}{\kern0pt}\ {\isacharprime}{\kern0pt}a\ tp\ \ {\isacharequal}{\kern0pt}\ {\isachardoublequoteopen}p\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a\ list{\isacharparenright}{\kern0pt}\ set{\isachardoublequoteclose}%
+\ \isakeywordONE{by}\isamarkupfalse%
+\ auto%
+\end{isabellebody}
 
 A notable limitation of this feature is that \isa{typedef} commands cannot be used inside a locale context.
 \footnote{Though workarounds may be possible, see \cite{kunvcar2016types}.}
@@ -528,21 +546,42 @@ Isabelle allows developers to assign Haskell-style type classes to type paramete
 This guarantees that specific functions or properties are available when instantiating the type,
 operating similarly to interfaces in standard programming languages.
 
-\begin{verbatim}
-class c =
-  fixes tonat :: "'a => nat"
-
-datatype 'a::c D = Con 'a
-
-instantiation bool :: c begin
-  fun c_bool where "c_bool True = 1" | "c_bool False = 0"
-  instance .. 
-end
-
-term "Con False :: bool D"
-\end{verbatim}
+\begin{isabellebody}\isanewline
+\isakeywordONE{class}\isamarkupfalse%
+\ c\ {\isacharequal}{\kern0pt}\isanewline
+\ \ \isakeywordTWO{fixes}\ tonat\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ {\isasymRightarrow}\ nat{\isachardoublequoteclose}\isanewline
+\isanewline
+\isakeywordONE{datatype}\isamarkupfalse%
+\ {\isacharprime}{\kern0pt}a{\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}c\ D\ {\isacharequal}{\kern0pt}\ Con\ {\isacharprime}{\kern0pt}a\isanewline
+\isanewline
+\isakeywordONE{instantiation}\isamarkupfalse%
+\ bool\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ c\ \isakeywordTWO{begin}\isanewline
+\ \ \isakeywordONE{fun}\isamarkupfalse%
+\ c{\isacharunderscore}{\kern0pt}bool\ \isakeywordTWO{where}\ {\isachardoublequoteopen}c{\isacharunderscore}{\kern0pt}bool\ True\ {\isacharequal}{\kern0pt}\ {\isadigit{1}}{\isachardoublequoteclose}\ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}c{\isacharunderscore}{\kern0pt}bool\ False\ {\isacharequal}{\kern0pt}\ {\isadigit{0}}{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordONE{instance}\isamarkupfalse%
+%
+% \isadelimproof
+% \ %
+% \endisadelimproof
+%
+% \isatagproof
+\ \isakeywordONE{{\isachardot}{\kern0pt}{\isachardot}{\kern0pt}}\isamarkupfalse%
+% %
+% \endisatagproof
+% {\isafoldproof}%
+% %
+% \isadelimproof
+% %
+% \endisadelimproof
+\ \isanewline
+\isakeywordTWO{end}\isamarkupfalse%
+\isanewline
+\isanewline
+\isakeywordONE{term}\isamarkupfalse%
+\ {\isachardoublequoteopen}Con\ False\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ bool\ D{\isachardoublequoteclose}\isanewline
+\end{isabellebody}
 
 While locales are generally more flexible (accommodating multiple type parameters and arbitrary values),
 type classes offer a crucial advantage for our architecture:
-a \isa{typedef} can directly leverage a type class constraint in its definition. 
+a \isakeywordTWO{typedef} can directly leverage a type class constraint in its definition.
 This allows us to construct robust, globally constrained types predicated upon existing inductive properties.
