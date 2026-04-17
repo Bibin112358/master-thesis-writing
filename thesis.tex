@@ -37,7 +37,7 @@
 % For positioning library (helps position nodes more easily), 
 % and arrows.meta for more arrow tips and styles
 \usetikzlibrary{positioning, arrows.meta}
-
+\usetikzlibrary{arrows.meta,positioning,calc}
 
 
 %% The AMS-LaTeX extensions for mathematical typesetting.  Do not
@@ -133,34 +133,27 @@
 \usepackage{algpseudocode}
 
 
+\usepackage{arydshln}
 
-%% IMPORTANT!!! Change the active line below to \studentwritingtrue
-%% when you want to start writing to easily get rid of the initial chapters
-\newif\ifstudentwriting
-\studentwritingfalse
-% \studentwritingtrue
-
+%% Isabelle Packages
+\usepackage{isabelle/isabelle}
+\usepackage{isabelle/comment}
+\usepackage{isabelle/isabellesym}
+\usepackage{isabelle/isabelletags}
+\usepackage{isabelle/pdfsetup}
+\usepackage{isabelle/railsetup}
 
 
 %% Document information
 %% ====================
 
-\title{Title of Thesis}
-\author{S. Tudent}
+\title{Evolving and Extending Certificate Generation for a Program Verifier}
+\author{Bibin Muttappillil}
 \thesistype{Master Thesis}
-\advisors{Advisors: Prof.\ Dr.\ A. D. Visor, Dr.\ P. Ostdoc}
+\advisors{Advisors: Yushuo Xiao and Prof.~Dr.~Peter M\"uller}
 \department{Department of Computer Science}
-\date{January 19, 2038}
+\date{17\textsuperscript{th} April, 2026}
 
-
-\ifstudentwriting
-\title{A Randomized Algorithm for Computing the Median}
-\author{S. Tudent}
-\thesistype{Master Thesis}
-\advisors{Advisors: Prof.\ Dr.\ A. D. Visor, Dr.\ P. Ostdoc}
-\department{Department of Computer Science}
-\date{January 19, 2038}
-\fi
 
 \begin{document}
 
@@ -176,14 +169,13 @@
 \end{titlingpage}
 
 
-\chapter*{Acknowledgments}
-\input{acknowledgments.tex}
+
+\input{ch0_abstract.tex}
 \pagebreak
 
-
-
-
-\ifstudentwriting \input{student_abstract.tex} \else \input{abstract.tex} \fi
+\chapter*{Acknowledgments}
+\input{ch0_acknowledgments.tex}
+\pagebreak
 
 
 %% TOC with the proper setup, do not change.
@@ -191,18 +183,22 @@
 \tableofcontents
 \mainmatter
 
-\ifstudentwriting \else \input{explanations_to_remove} \fi
 
-
-\input{student_writeup.tex}
+\input{writeup.tex}
 
 \backmatter
 
 \bibliographystyle{plain}
-\bibliography{refs}
+\bibliography{references}
 
 \appendix
 \input{appendix}
+
+
+% TODO
+\section*{Agreements}
+\subsection*{Of Independence}
+\subsection*{AI Usage}
 
 \includepdf[pages={-}]{declaration-originality.pdf}
 

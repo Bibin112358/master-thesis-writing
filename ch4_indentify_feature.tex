@@ -1,0 +1,267 @@
+\chapter{Selecting Feature to Support}
+\label{sec:unsupported-usage}
+
+The prior work layed extensive fundamental work in supporting a subset of Boogie programs.
+The question now is, how to enlargen this subset. i.e. which unsupported feature to select
+to extend the proof generation.
+
+\paragraph{Prior Work.} Section 3.1 and Section 9 of the prior work \cite{parthasarathy2021formally} already hints,
+that Boogie maps are the main feature not supported yet.
+It also mentiones other open challenges, such as bitvectors, procedure calls.
+While this already give us some motivation, in addition of maps being a interesting feature to explore,
+we wanted to do some more analysis to confirm their usefulness.
+Additionally, the analysis also give us what map feature might be more important or used,
+as we do not expect to fully support Boogie maps in all its glory.
+
+% The main Boogie features not supported by our subset are maps and other primitive types such as bitvectors. Boogie maps are polymorphic and impredicative, i.e. one can define maps that contain themselves in their domain. Giving a semantic model for such maps in a proof assistant such as Isabelle or Coq is non-trivial; we aim to tackle this issue in the future. Modelling bitvectors will be simpler, although maintaining full automation may require some additional work.
+% TODO cite? Gaurav 3.1 The Boogie Language
+
+% Supporting Boogie’s potentially-impredicative maps is the main open challenge: maps can take other maps as input, potentially including themselves. The challenge with this feature is to still be able to express a type in Isabelle capturing all Boogie values despite the potentially-cyclic nature of map types. In practice, however, this may not be required in full generality: we have observed that Boogie front-ends rarely use maps that contain maps of the same type as input. Therefore, we plan to extend our technique to support a suitably-expressive restricted form of Boogie maps.
+% TODO cite? Gaurav 9 Conclusion
+
+
+\section{List of unsupported features}
+
+\paragraph{Subsetchecker and Source Code.} Before deciding on which feature to choose,
+we need to want a list of unsupported from which we choose the feature we want to work on.
+To find more unsupported feature, we looked at the source code of the proof generation module.
+Fortunately, there exists a subset checker, that looks for any unsupported feature,
+before attempting proof generation.
+From that function we gathered the following limitations
+\begin{itemize}
+  \item procedure type parameters
+  \item free pre- and postconditions
+  \item where clauses
+  \item Floats, Strings, Rounding Mode, Regular Expressions
+  \item bitvectors
+  \item maps
+  \item Code Expressions
+  \item concurrent intermediate verification language (CIVL) features
+\end{itemize}
+
+\paragraph{Exceptions} Another source is to look at \texttt{NotImplementedException} and \texttt{NotSupportedException}
+in the code of the proof generation.
+From this we gather, that it does not support \texttt{arguments} type encoding,
+declaration free prover context, incarnation on lhs of assignment, and caching of verification results. For brevity we do not explain what all these feature.
+
+This might not be an exhaustive list of all the missing features,
+but it gives us a reasonable selection to choose from.
+One could argue, that the feature that should be implemented next, would be named and on this list anyway.
+
+
+\section{Evaluating Feautures}
+
+Now we need a way to evaluate these choices.
+One quick way to evaluate is to abuse the existing subsetchecker to collect usages.
+This limits us to mainly analyze the ones listed in the subsetchecker.
+Again, we already have an idea which features we could chose to support,
+so we do not want to spend too much time with the analysis,
+and the list already contains some good features to extend.
+Currently, the subsetchecker collects the first unsupported feature and reports it.
+With little change, we can actually report every unsupported featuer appearing in the input.
+We then group what we consider the same limitation together, such that each limitation is reported only once per input Boogie program.
+Then we run this process for all tests and see, which unsupported feature appears in the most of them.
+% TODO? script and command in appendix?
+%  - script `BoogieDriver $b | sort | uniq'
+%  - `check.sh | sort | uniq -c | sort -nr`
+
+
+\subsection{Dafny Tests Statistic}
+
+Now we need a suitable test suite.
+We figured, since one motivation is to support Dafny programs, we would test on their test suite.
+For that we first take all the integration tests from the official Dafny repo\footnote{https://github.com/dafny-lang/dafny/tree/master/Source/IntegrationTests} and compile them to Boogie program.
+This resultet in 2002 tests.
+Then we run our little counting tool described above.
+This is our result, ignoring 11 errors (mostly parsing errors):
+\begin{table}[t]
+  \centering
+  \begin{tabular}{r l l}
+    \hline
+    Count & Feature & Boogie visitor node \\
+    \hline
+    2191 & Maps & \texttt{VisitMapType} \\
+    1776 & Maps & \texttt{VisitLambdaExpr} \\
+    1531 & free requires & \texttt{VisitImplementation} \\
+    1312 & where clauses & \texttt{VisitImplementation} \\
+     134 & Bitvectors & \texttt{VisitBvType} \\
+      17 & Bitvectors & \texttt{VisitBvConcatExpr} \\
+       8 & Bitvectors & \texttt{VisitBvExtractExpr} \\
+    \hline
+  \end{tabular}
+  \caption{Occurrences of selected unsupported or relevant Boogie features in the compiled Dafny integration tests.}
+  \label{tab:dafny-feature-counts}
+\end{table}
+
+We can see that all tests use maps, many use lambda expressions,
+quite a sizeable portion \texttt{free} and \texttt{where} clauses on procedures,
+and few use Bitvectors.
+
+
+\subsection{Why Maps in every Dafny Test?}
+
+It is surprising, that all input programs (that reach the subset checker) use maps.
+The reason becomed clear, when one tries to compile a very simple Dafny program:
+
+\begin{verbatim}
+method Succeeds() {
+    assert true;
+}
+\end{verbatim}
+
+Even this simple program, generates an almost 3000 line long Boogie program, including a map type
+\texttt{type Heap = [ref][Field]Box;}
+Even if it is not used, Dafny creates backround theories and models,
+in particular also for their heap modelling, for which they use maps.
+This explains, why maps appear in every test case.
+Looking further, lambda expressions and free clauses also appear in this Boogie program.
+Looking at testcases where they do not appear seems to show, that the will appear,
+if there is any assertion.
+The other tests are mainly for non-verification things, like parsing, compiling and running,
+import modules and classes.
+Test cases may just have one global constant definition, or a function without pre- and postconditions.
+Such examples are not useful for our use case, as we are interested in the verification part.
+Therefore, we can assume, that evey relevant dafny test-case will have maps, including lambdas expressions,
+and procedures marked with free postconditions.
+
+
+\subsection{Boogie Tests Statistics}
+
+Another test suite to examine is the set of tests inside the Boogie repository itself
+\footnote{https://github.com/boogie-org/boogie/tree/master/Test}.
+There we have gathered around 700 tests.
+Many of them were either passing the check,
+or failing before the subset checker.
+The most reported problematic features were again maps,
+with 179 occurrences.
+The next most frequent non-map-related problems occurred fewer than 30 times.
+
+
+\section{Methodology Caveats}
+
+As useful as this analysis of the test data might seem, it should be taken with a grain of salt.
+For the dafny tests, we have seen that even a simple Dafny program contains our answer,
+questioning the usefulness of the other test cases for our use case.
+We also only collected numbers about the features identified by the subset checker in the proof generation module.
+We also used all testcases, regardless if the verify or not or have anything to verify.
+Ideally, we would only look at the ones that verify, as the others are not valid inputs for the proof generation.
+Nonetheless, it gives us a first hand approximation on which features might be more used and important.
+
+
+\section{Chosen Feature and its Usage}
+\label{sec:goals-to-support}
+
+Our data shows us, that maps seem to be the most useful next extension.
+Supporting maps in their full semantics is beyond the scope of this thesis,
+as we suspect supporting the whole map semantics to be difficult.
+Therefore, we target a practically useful subset of map semantics
+and restrict the supported usage patterns.
+We want take a closer look, on how maps are used, to see which use cases we should prioritize,
+One the one hand we will analyse the Boogie program generated from the simple Dafny program more closely.
+Here are the relevant map parts from the compiler Dafny program:
+
+\begin{verbatim}
+type Heap = [ref][Field]Box;
+
+revealed function {:inline} read(H: Heap, r: ref, f: Field) : Box
+{
+  H[r][f]
+}
+
+revealed function {:inline} update(H: Heap, r: ref, f: Field, v: Box) : Heap
+{
+  H[r := H[r][f := v]]
+}
+
+// ...
+
+axiom (forall t0: Ty, 
+    t1: Ty, 
+    heap: Heap, 
+    h: [Heap,Box]Box, 
+    r: [Heap,Box]bool, 
+    rd: [Heap,Box]Set, 
+    bx0: Box :: 
+  { Apply1(t0, t1, heap, Handle1(h, r, rd), bx0) } 
+  Apply1(t0, t1, heap, Handle1(h, r, rd), bx0) == h[heap, bx0]);
+
+// ...
+
+  $_ModifiesFrame := (lambda $o: ref, $f: Field :: 
+      $o != null && $Unbox(read($Heap, $o, alloc)): bool ==> false);
+\end{verbatim}
+
+We can already glace a few things from this.
+First, it uses map select and map store, which is to be expected.
+Maps are used with abstract types, such as \texttt{ref, Box, Field}.
+We have multi-arity maps, as well as maps nested in both the range and the domain.
+We also have an axiom quantifying over all keys of a map, and even over maps themselves.
+This implies that maps have infinite domains.
+This already gives us a list of features we need to support to certify Dafny programs.
+
+Looking at all map usages across all Dafny files,
+we did not see any polymorphic maps.
+Supporting this feature would significantly increase the complexity of the development, as generics and polymorphism present inherent formalization challenges, % TODO ref
+including the handling of \emph{impredicative} maps. % TODO ref Gaurav?
+Also, the nesting levels on the domain seem to be at most one, as is our simple example.
+Nesting on the range type is more popular, for example the type \texttt{[[ref][Field]Box,Box,Box,Box]bool} appears more than 100 times.
+There also seem to be tests with much higher arity, with one map having 300 \texttt{Box} entries in the range type.
+The names suggest that these may be used to model structs and classes, which would explain the large number.
+
+This gives us a list of things to support for Dafny:
+\begin{itemize}
+  \item map select and store
+  \item abstract type as domain and range types
+  \item one level of map nesting in domain types
+  \item arbitrary level of nesting in range type
+  \item quantification over maps and domain types, implying infinite maps
+  \item monomorphic maps
+  \item lambda expressions
+\end{itemize}
+
+Notably, Viper uses an encoding similar to Dafny's, but it relies on polymorphic maps. % TODO ref
+Looking at the Dafny test folder in the Boogie repository \footnote{https://github.com/boogie-org/boogie/tree/master/Test/dafny},
+it seems that polymorphic maps were used in the past but were later abandoned.
+\footnote{https://github.com/dafny-lang/dafny/pull/4020}\textsuperscript{,}
+\footnote{https://github.com/dafny-lang/dafny/pull/4597}
+
+
+
+\section{Extensionality Requirement}
+
+Lastly, we require our maps to be extensional.
+A natural question is whether extensionality is strictly necessary.
+There is no explicit axiom in the VC enforcing it.\ref{sec:vc-map-axioms}
+We still argue that this property is important.
+Using the monomorphic type encoding, which defaults to the SMT array theory,
+naturally provides extensionality.
+To remain consistent across different type encodings, maintaining extensionality is desirable.
+
+Another reason is illustrated by the following example:
+\begin{verbatim}
+  var a: [int]int;
+  var b: [int]int;
+  var m: [[int]int]int;
+
+  a := (lambda x:int :: x+1);
+  a[42] := 42;
+  b := (lambda x:int :: if x == 42 then 42 else x+1);
+
+  // assert a == b;  // true if extensional
+  m[a] := 1;
+  m[b] := 2;
+  assert m[a] == 1;  // should never be proven?
+  assert m[a] == 2;  // true if extensional
+\end{verbatim}
+
+Here we created two maps \texttt{a} and \texttt{b}, that behave the same.
+If \texttt{a} and \texttt{b} would be considered differently in our semantics,
+then we are able to store a value at each of them.
+Not having extensionality would mean that the answer to the equality question is unknown,
+not that they are considered different.
+Since we will have a concrete representation of maps in our Isabelle/HOL encoding,
+we have to decide if a map can have multiple representations.
+In this case we strive for one representation,
+enforcing the extensionality which is the behavior for some type encodings of Boogie.
+
+% point of nested maps?

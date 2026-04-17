@@ -1,0 +1,24 @@
+\begin{abstract}
+Automated program verification has seen significant advancements. 
+These verifiers are typically constructed as a pipeline of translations: from high-level languages 
+annotated with pre- and post-conditions, to intermediate verification languages (IVLs), 
+and ultimately to verification conditions (VCs) encoded as Satisfiability Modulo Theories (SMT) formulas. 
+Boogie is a prominent IVL whose verifier generates such VCs. However, the reliability of these 
+verifiers depends entirely on their correct implementation, for which formal guarantees are rarely provided.
+
+Prior work tackled this issue by generating certificates,
+in the form of machine-checked proofs in Isabelle/HOL,
+for individual verification runs.
+This foundational framework supported a core 
+subset of the Boogie language by instrumenting the verifier's codebase. Because the official Boogie 
+repository has since undergone significant architectural updates, our first contribution modernizes 
+the certificate generation module to ensure compatibility with the latest Boogie codebase.
+
+Following a usage analysis, we identified Boogie maps as the most critical unsupported feature 
+preventing the certification of complex programs from front-ends like Dafny. The primary contribution 
+of this thesis is the design and extension of the formal foundational semantics to support a 
+practical subset of Boogie maps. We extended the certificate generator accordingly and successfully 
+certified verification runs for programs using maps, demonstrating the soundness of our approach. 
+Finally, we discuss the advantages and limitations of our chosen semantic embedding and outline 
+alternative approaches and directions for future work.
+\end{abstract}
