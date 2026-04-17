@@ -100,17 +100,25 @@ where bounded quantifiers become overly general due to fresh type variables.
 We are confident that this can be fixed with additional time for investigation.
 
 
-\subsection{VC change Tests}
-In Section~\ref{sec:our-vc-change} we described, that we modified the VC,
+\subsection{Our VC Change Effects}
+\label{sec:vc-change-tests}
+In Section~\ref{sec:our-vc-change}, we described how we modified the VC
 by weakening one axiom.
-We want to see if this change alone leads to less verification by Boogie
-(without the proof generating module).
-So we tested it with the Boogie and Dafny test suit and compared it
-with a Boogie version without this change:
+We therefore want to determine whether this change alone reduces Boogie's verification power
+independently of the proof generation module.
 
-[TODO rephrase] The prior work \cite{parthasarathy2021formally} included seven external benchmarks \cite{chen2017triggerless}, that initially used maps.
+Our test suite included six verifying programs from the original external benchmarks of \cite{chen2017triggerless},
+which had been used in modified form by the prior work \cite{parthasarathy2021formally}.
+We also identified 21 tests in the Boogie repository that use monomorphic maps
+without bitvector, set, or datatype features.
+In addition, we included five Boogie programs generated from simple Dafny programs
+and 14 manually crafted tests.
+Each of these 46 tests contains at least one verifiable procedure.
 
-[TODO evaluation still to be done]
+We ran the full suite once with stock Boogie and once with our modified VC.
+Across all 46 tests, we observed no difference in the output.
+This suggests that, at least for these cases, the change does not make a noticeable difference.
+It remains an open question whether there are cases in which the two versions behave differently.
 
 
 \section{Limitations}
@@ -126,10 +134,10 @@ A notable characteristic of this approach is that the value semantics inherently
 implying that a single, fully uniform semantic definition may not cover all programs.
 
 
-\subsection{VC Change}
+\subsection{Our VC Change}
 One necessary modification was to adjust the VC map axiom,
-as it was too general for our semantics.
-For the cases we tested, this change made no difference.
+as it was too general for our semantics (see Section~\ref{sec:our-vc-change}).
+For the cases we tested, this change made no difference (see \Cref{sec:vc-change-tests}).
 In general, the modified axiom is not weaker for type-safe programs.
 Nevertheless, it may affect the SMT solver's ability to check the VC.
 
@@ -189,6 +197,7 @@ is necessary to increase the verification success rate of generated proofs.
 During the design phase, several alternative approaches were considered to address the complexities of modeling Boogie maps. We briefly outline these alternatives and the rationale behind our ultimate design choices.
 
 \subsection{Association list and finite maps}
+\label{sec:assoc-list}
 
 Our first idea was to model a map as an association list.
 This is not a valid strategy, because Boogie maps are total functions and therefore infinite(see Section~\ref{sec:semantics-boogie-maps}).
@@ -220,6 +229,7 @@ The primary advantage of this approach is that it largely eliminates the need fo
 The disadvantage, however, is the extensive overhead: one would need to statically extract all types, instantiate the map semantics for every observed type, and define polymorphic select and store operations for all possible type combinations. It remains an open question whether the complexity of generating these bespoke semantics outweighs the complexity of our unified, invariant-based approach.
 
 \subsection{Context/Heap Model}
+\label{sec:contex-model}
 
 Another early concept was to maintain a separate global structure (a "heap") containing all maps,
 accessed via a unique identifier (e.g., \isa{maps :: int {\isasymRightarrow} val {\isasymRightarrow} val}).
@@ -366,8 +376,19 @@ One approach is to programmatically determine the required nesting level from th
 and dynamically generate the corresponding Isabelle semantics, definitions, and proofs.
 An even more robust solution would involve defining a single semantic framework capable of handling arbitrary depths without relying on program-dependent generation.
 
-\subsection{Weaker Non Empty Types \& Closed Assumptions [TODO] }
-% Yushuo: Reading through here, I realize there might be another future work you could add to the previous section: verifying that the assumptions you made (e.g. the non-empty types) can be satisfied by instantiating the Boogie semantics concretely.
+
+\subsection{Weaker Non-Emptiness and Closedness Assumptions}
+
+In \Cref{sec:non-empty-types}, we saw that we had to adjust two axioms in the proof generation,
+because our current semantics no longer satisfy them in their original form.
+This change was necessary to avoid introducing inconsistent assumptions.
+
+An important direction for future work is to show that the current semantics can indeed satisfy these adjusted axioms.
+Another is to refine the axiomatization further so that these assumptions refer only to abstract values and abstract types.
+For the remaining, non-abstract part of the semantics, the corresponding properties should ideally be derived as theorems rather than postulated as assumptions.
+If this separation can be established, it should be possible to prove the relevant axioms for non-abstract values
+while assuming them only for abstract values, thereby recovering a stronger overall result.
+
 
 \subsection{Supporting Additional Boogie Features}
 

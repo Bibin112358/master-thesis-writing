@@ -776,9 +776,10 @@ that $m$ is indeed a map and that the store operation is applied to values of th
 This changes the VC produced by the Boogie verifier
 and may therefore reduce the number of successful verifications.
 We expect it to work in many cases, since the input programs are type-checked.
-Nonetheless, the solver has a weaker axiom available,
-so we must evaluate whether it is in fact too weak.
-% TODO evaluation
+Nonetheless, the solver is given a weaker axiom,
+so we must evaluate whether it is too weak in practice.
+We made the same change for multi-arity maps as well
+in order to test more broadly whether this VC modification affects the solver's behavior (see \Cref{sec:vc-change-tests}).
 
 
 \subsection{Showing Desired Properties}
@@ -1069,8 +1070,6 @@ otherwise, their theorems remain in non-interpreted form.
 
 \subsection{Non Empty Types \& Closed Types Assumption}
 \label{sec:non-empty-types}
-
-% [TODO: talk about type variable issue in the future?]
 
 The original proof generation relied on global assumptions of type closedness and non-emptiness.
 Specifically, it assumed that the type of every value is closed, i.e., that it contains no free type variables,

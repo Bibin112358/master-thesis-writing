@@ -91,7 +91,6 @@ Additionally, some interfaces had evolved, requiring adjustments to the proof ge
 
 A more involved architectural change was the removal of Boogie's static command-line options variable.
 Previously, user-defined command-line arguments could be globally accessed via the static variable \lstinline[columns=fixed]{CommandLineOptions.Clo}.
-% TODO line break
 \footnote{\url{https://github.com/boogie-org/boogie/pull/501}}
 We adopted the developers' recommended approach and introduced our own static variable, similar to how Dafny initially handled the transition.\footnote{\url{https://github.com/dafny-lang/dafny/pull/1866}}
 While Dafny subsequently refactored this into a non-static implementation,\footnote{\url{https://github.com/dafny-lang/dafny/pull/3663}}
