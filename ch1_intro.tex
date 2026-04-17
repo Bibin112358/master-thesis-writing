@@ -18,18 +18,18 @@ a translational verifier breaks down complex programmatic proofs into simpler lo
 
 For verification, one might take a practical programming language, such as Python,
 and instrument it with specified pre- and postconditions.
-A tool like Nagini\footnote{https://www.pm.inf.ethz.ch/research/nagini.html}
+A tool like Nagini\footnote{\url{https://www.pm.inf.ethz.ch/research/nagini.html}}
 can then take the instrumented Python program as input and produce an equivalent program in Viper.
-\footnote{https://www.pm.inf.ethz.ch/research/viper.html} 
+\footnote{\url{https://www.pm.inf.ethz.ch/research/viper.html}}
 Viper is an Intermediate Verification Language (IVL) that helps mitigate the task of building a custom verification tool
 for every programming language by handling the core verification logic that is shared across languages.
 This is similar to how LLVM simplifies building a compiler by providing a unified target language before assembly. 
 
-Viper programs may then\footnote{Viper also offers an alternative verification backend using symbolic execution.} be translated into another IVL called Boogie\footnote{https://github.com/boogie-org/boogie}.
+Viper programs may then\footnote{Viper also offers an alternative verification backend using symbolic execution.} be translated into another IVL called Boogie\footnote{\url{https://github.com/boogie-org/boogie}}.
 These Boogie programs are ultimately translated into Verification Conditions (VCs)
-formulated in the SMT format,\footnote{https://smt-lib.org/}which is a standardized way to represent mathematical formulas.
-These VCs can then be checked by an SMT solver, such as Z3.\footnote{https://www.microsoft.com/en-us/research/project/z3-3/}
-Another prominent IVL that targets Boogie as its backend is Dafny.\footnote{https://dafny.org/}
+formulated in the SMT format,\footnote{\url{https://smt-lib.org/}}which is a standardized way to represent mathematical formulas.
+These VCs can then be checked by an SMT solver, such as Z3.\footnote{\url{https://www.microsoft.com/en-us/research/project/z3-3/}}
+Another prominent IVL that targets Boogie as its backend is Dafny.\footnote{\url{https://dafny.org/}}
 
 
 \begin{figure}[t]
@@ -50,7 +50,7 @@ there are seldom formal guarantees about their actual software implementations.
 Ideally, we want a mechanism to prove that if the output of a translation is verifiable,
 then the input program is guaranteed to be correct as well.
 Providing these foundational guarantees is the primary motivation behind the Viper Roots project.
-\footnote{https://www.pm.inf.ethz.ch/research/roots.html}
+\footnote{\url{https://www.pm.inf.ethz.ch/research/roots.html}}
 
 There has been significant prior work in this space by Parthasarathy et al.~\cite{parthasarathy2021formally}, 
 specifically targeting the Boogie-to-SMT segment of the verification pipeline.

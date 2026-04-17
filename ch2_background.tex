@@ -6,10 +6,10 @@
 
 An excellent resource for the Boogie language is the paper by K. Rustan M. Leino \cite{leino2008boogie},
 which is officially linked on the Boogie GitHub page.
-\footnote{https://github.com/boogie-org/boogie}
+\footnote{\url{https://github.com/boogie-org/boogie}}
 Unfortunately, the paper is no longer entirely up-to-date with the modern development of the language.
-\footnote{https://boogie-docs.readthedocs.io/en/latest/LangRef.html\#inconsistent-assumptions}\textsuperscript{,}
-\footnote{https://github.com/dafny-lang/dafny/issues/4005\#issuecomment-1570363166}
+\footnote{\url{https://boogie-docs.readthedocs.io/en/latest/LangRef.html\#inconsistent-assumptions}}\textsuperscript{,}
+\footnote{\url{https://github.com/dafny-lang/dafny/issues/4005\#issuecomment-1570363166}}
 Nevertheless, it remains a solid starting point, as it is the most comprehensive reference available.
 
 \paragraph{Boogie} 
@@ -134,7 +134,7 @@ Boogie supports more complex map types as well.
 Maps can take multiple keys, referred to as multi-arity maps.
 Furthermore, the domain and range types can themselves be maps, enabling nested map structures.
 However, multi-arity maps are generally discouraged according to this documentation,
-\footnote{https://boogie-docs.readthedocs.io/en/latest/LangRef.html\#inconsistent-assumptions}
+\footnote{\url{https://boogie-docs.readthedocs.io/en/latest/LangRef.html\#inconsistent-assumptions}}
 as they can be structurally transformed into nested, single-arity maps.
 
 \begin{lstlisting}[caption={Multi-Arity Boogie Map Example}]
@@ -244,11 +244,11 @@ caption={\texttt{boogie /help} output}]
 \end{lstlisting}
 
 Over time, the default setting has changed from predicate to monomorphic type encoding.
-\footnote{https://github.com/boogie-org/boogie/pull/732}
+\footnote{\url{https://github.com/boogie-org/boogie/pull/732}}
 The prior work was built when predicate type encoding was the default,
 and it functions best under this configuration.
 According to the documentation of the prior work,
-\footnote{https://github.com/viperproject/boogie-proofgen/?tab=readme-ov-file\#supported-subset}
+\footnote{\url{https://github.com/viperproject/boogie-proofgen/?tab=readme-ov-file\#supported-subset}}
 it does not support type declarations under other encodings,
 as they fundamentally alter the structure of the resulting VC.
 
@@ -388,18 +388,18 @@ This format is used to encode the VC output of the Boogie verifier.
 The language is standardized as SMT-LIB.
 Extensive documentation can be found in "The SMT-LIB Standard" paper~\cite{barrett2010smt},
 and various online resources provide comprehensive tutorials on writing and evaluating SMT queries.
-\footnote{https://www.philipzucker.com/z3-rise4fun/guide.html}\textsuperscript{,}
-\footnote{https://microsoft.github.io/z3guide/docs/theories/Arrays/}\textsuperscript{,}
-\footnote{https://theory.stanford.edu/\~nikolaj/programmingz3.html}
+\footnote{\url{https://www.philipzucker.com/z3-rise4fun/guide.html}}\textsuperscript{,}
+\footnote{\url{https://microsoft.github.io/z3guide/docs/theories/Arrays/}}\textsuperscript{,}
+\footnote{\url{https://theory.stanford.edu/\~nikolaj/programmingz3.html}}
 
 
 \section{Interactive Theorem Provers (ITPs)}
 
 The proof generation module produces its certificates in the proof language of Isabelle/HOL.
 Isabelle/HOL is an Interactive Theorem Prover (ITP).
-Other prominent ITPs include Rocq\footnote{https://rocq-prover.org/}
+Other prominent ITPs include Rocq\footnote{\url{https://rocq-prover.org/}}
 \cite{huet1997coq}
-and Lean\footnote{https://lean-lang.org/} \cite{de2015lean}.
+and Lean\footnote{\url{https://lean-lang.org/}} \cite{de2015lean}.
 These systems assist in the mechanical construction of mathematical proofs on a computer
 and rigidly verify that the mechanized proofs are logically sound.
 
@@ -410,10 +410,10 @@ Isabelle itself serves as a generic meta-framework used to build specific logica
 Isabelle/HOL is one such implementation, where HOL stands for Higher-Order Logic.
 It operates by combining functional programming (using Haskell-style syntax) with formal logic.
 We refer the reader to the extensive official tutorial \cite{nipkow2002isabelle}
-and the project website\footnote{https://isabelle.in.tum.de/} for deeper information.
+and the project website\footnote{\url{https://isabelle.in.tum.de/}} for deeper information.
 Here, we briefly introduce a few advanced features used heavily throughout this project:
 
-\paragraph{Sum Types}\footnote{https://isabelle.in.tum.de/library/HOL/HOL/Sum\_Type.html}
+\paragraph{Sum Types}\footnote{\url{https://isabelle.in.tum.de/library/HOL/HOL/Sum\_Type.html}}
 We can combine two existing types to create a union type.
 For example, \isa{int + bool} represents a type that can be either an integer \emph{or} a boolean.
 Both constituent types provide their own datatype constructors:
@@ -465,7 +465,7 @@ Crucially, recursion may not appear in a negative position:
 Such a structure is prohibited because an inductive definition cannot reason about negative cases
 while the property itself is still actively being defined.
 
-\paragraph{Locales}\footnote{https://isabelle.in.tum.de/doc/locales.pdf}
+\paragraph{Locales}\footnote{\url{https://isabelle.in.tum.de/doc/locales.pdf}}
 We can isolate environments by setting up locales in Isabelle/HOL:
 
 \begin{isabellebody} \isanewline
@@ -541,7 +541,7 @@ This type definition is even permitted to depend on a type parameter by providin
 A notable limitation of this feature is that \isa{typedef} commands cannot be used inside a locale context.
 \footnote{Though workarounds may be possible, see \cite{kunvcar2016types}.}
 
-\paragraph{Type Classes}\footnote{https://isabelle.in.tum.de/doc/classes.pdf}
+\paragraph{Type Classes}\footnote{\url{https://isabelle.in.tum.de/doc/classes.pdf}}
 Isabelle allows developers to assign Haskell-style type classes to type parameters.
 This guarantees that specific functions or properties are available when instantiating the type,
 operating similarly to interfaces in standard programming languages.
