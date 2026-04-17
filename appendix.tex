@@ -1,7 +1,31 @@
-\chapter{Dummy Appendix}
+\chapter*{AI Usage}
 
-You can defer lengthy calculations that would otherwise only interrupt
-the flow of your thesis to an appendix.
+I would like to transparently clarify how I used AI in this thesis project.
 
-\section{Appendix}
-\label{sec:appendix}
+\paragraph{Research} At the beginning of the project, while exploring potential design ideas for Boogie map semantics
+(see \Cref{sec:support-boogie-maps})
+I used Gemini 3 and ChatGPT based on GPT-5.3 to generate possible approaches.
+These attempts were less successful, as they mostly suggested common
+association-list-based approaches (see \Cref{sec:assoc-list}) or context/heap-model ideas (see \Cref{sec:contex-model}).
+Such approaches are useful for modeling classical dictionaries in mainstream languages,
+but not for capturing the functional nature of Boogie maps.
+
+\paragraph{Proof Engineering} Most of the proofs written in Isabelle/HOL were written by hand, with little or no AI assistance.
+One extensionality proof was guided by Gemini 3. It produced an incorrect proof, which I then corrected.
+Another area in which AI was helpful was proving lifted versions of definitions and lemmas, as I initially lacked expertise with the lifting package.
+Here, Gemini 3 was helpful as well.
+Otherwise, Gemini and ChatGPT were used mainly to explain errors or suggest references for alternative proof strategies.
+
+\paragraph{Programming} For programming and adjusting the proof generation module,
+AI was used to debug a few difficult cases, explain existing code, and suggest small code snippets.
+For this, I used Junie by JetBrains and Claude Agent by Anthropic, both within JetBrains Rider.
+
+\paragraph{\LaTeX} I used OpenAI Prism as my main editor to create this thesis in \LaTeX.
+I used it to convert Markdown to \LaTeX, create TikZ figures from visuals I had created in a slide deck,
+generate tables, and fix \LaTeX{} errors.
+
+\paragraph{Writing} I used AI during the writing of this thesis.
+My workflow was to write a draft by hand and then have it proofread and reformulated by an LLM.
+I primarily used Gemini 3 and OpenAI Prism.
+I used them to correct typographical and grammatical errors and to improve sentence structure
+and academic tone.
