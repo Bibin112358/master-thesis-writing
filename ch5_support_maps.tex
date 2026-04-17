@@ -77,7 +77,7 @@ To incorporate Boogie Maps, we must introduce a new constructor to this datatype
 \ {\isacharprime}{\kern0pt}a{\kern0pt}\ val\ {\isacharequal}{\kern0pt}\ LitV\ lit\ {\isacharbar}{\kern0pt}\ AbsV\ {\isacharparenleft}{\kern0pt}the{\isacharunderscore}{\kern0pt}absv{\isacharcolon}{\kern0pt}\ {\isacharprime}{\kern0pt}a{\isacharparenright}{\kern0pt}\ {\isacharbar}{\kern0pt}\ MapV\ ?
 \end{isabellebody}
 
-The question now is, how we should replace the \texttt{?}.
+The question now is, how we should replace the \isa{?}.
 
 \subsection{Challenge: Cantor's Theorem}
 \label{sec:cantor}
@@ -163,19 +163,21 @@ For instance, representing types such as
 \label{sec:datatype-construction}
 The stratified hierarchy could be implemented by defining discrete datatypes for each level:
 
-% TODO convert
-\begin{verbatim}
-datatype 'a val0 = LitV0 lit | AbsV0 (the_absv: 'a)
-datatype 'a val1 = MapV1 "'a val0 
-  => ('a val1 + 'a val0)"
-datatype 'a val2 = MapV2 "('a val1 + 'a val0) 
-  => ('a val2 + 'a val1 + 'a val0)"
-datatype 'a val3 = MapV3 "('a val2 + 'a val1 + 'a val0)
-  => ('a val3 + 'a val2 + 'a val1 + 'a val0)"
-\end{verbatim}
-
+% datatype 'a val0 = LitV0 lit | AbsV0 (the_absv: 'a)
+% datatype 'a val1 = MapV1 "'a val0 
+%   => ('a val1 + 'a val0)"
+% datatype 'a val2 = MapV2 "('a val1 + 'a val0) 
+%   => ('a val2 + 'a val1 + 'a val0)"
+% datatype 'a val3 = MapV3 "('a val2 + 'a val1 + 'a val0)
+%   => ('a val3 + 'a val2 + 'a val1 + 'a val0)"
 \begin{isabellebody}\isanewline
-    
+\isakeywordONE{datatype} 'a val0 = LitV0 lit | AbsV0 'a\isanewline
+\isakeywordONE{datatype} 'a val1 = MapV1 "'a val0 \isanewline
+\ \ \ {\isasymRightarrow} ('a val1 + 'a val0)"\isanewline
+\isakeywordONE{datatype} 'a val2 = MapV2 "('a val1 + 'a val0) \isanewline
+\ \ \ {\isasymRightarrow} ('a val2 + 'a val1 + 'a val0)"\isanewline
+\isakeywordONE{datatype} 'a val3 = MapV3 "('a val2 + 'a val1 + 'a val0)\isanewline
+\ \ \ {\isasymRightarrow} ('a val3 + 'a val2 + 'a val1 + 'a val0)"\isanewline
 \end{isabellebody}
 
 
@@ -321,7 +323,7 @@ To support Boogie maps, the existing type definition must be extended to include
 
 
 As the current implementation is limited to single-arity maps
-(Section~\ref{sec:goals-to-support}), the \texttt{TMap} constructor requires only two arguments:
+(Section~\ref{sec:goals-to-support}), the \isa{TMap} constructor requires only two arguments:
 the key type and the value type.
 Supporting multi-arity maps would necessitate representing the keys as a list of types,
 but the current dual-type representation is sufficient for our defined goals.
@@ -332,7 +334,7 @@ Because our functional modeling of maps is extremely general,
 a single internal Isabelle function could represent multiple distinct Boogie map types.
 For instance, a map of type \isa{val1} might contain a function mapping integers and booleans to integers and booleans,
 making it impossible to distinguish from the outside whether it represents
-a \texttt{[int]int}, \texttt{[bool]bool}, or \texttt{[int]bool} map.
+a \lstinline[columns=fixed]{[int]int}, \lstinline[columns=fixed]{[bool]bool}, or \lstinline[columns=fixed]{[int]bool} map.
 To resolve this ambiguity, we explicitly store the intended key and value types within the map datatype:
 
 \begin{isabellebody}
@@ -345,26 +347,13 @@ To resolve this ambiguity, we explicitly store the intended key and value types 
 While this ensures that every map value carries explicit type information,
 it introduces a potential discrepancy:
 there is no inherent semantic connection between the stored types and the actual behavior of the Isabelle function.
-For example, a value could be tagged as \texttt{[bool]bool} while the underlying function operates on integers.
+For example, a value could be tagged as \lstinline[columns=fixed]{[bool]bool} while the underlying function operates on integers.
 This consistency requirement is addressed later through the definition of well-formedness invariants (Section~\ref{sec:wf-definition}).
 
 % TODO?
 % \paragraph{Accessor Functions for Map Types}
-% With the inclusion of explicit type tags,
-% we can define helper functions to extract the constituent types from a map type.
-% These functions are essential for the subsequent implementation of map operations:
 
-% \begin{verbatim}
-% fun key_ty where "key_ty (TMap tk _) = tk" | "key_ty _ = undefined"
-% fun val_ty where "val_ty (TMap _ tv) = tv" | "val_ty _ = undefined"
-% \end{verbatim}
-
-% \begin{isabellebody}\isanewline
-    
-% \end{isabellebody}
-
-
-% Detailed definitions for the full \texttt{type\_of\_val} logic are provided in Appendix~\ref{sec:appendix}.
+% Detailed definitions for the full \isa{type\_of\_val} logic are provided in Appendix~\ref{sec:appendix}.
 
 % These functions also play a crucial role in satisfying the VC map axioms (Section~\ref{sec:vc-map-axioms}),
 % especially regarding $\MapType$, $\MapTypeInvK$, and $\MapTypeInvV$.
@@ -479,7 +468,7 @@ If two map values agree on all keys, they should be represented by the identical
 The naive definition presents two primary issues in satisfying this property.
 
 \paragraph{Problem 1: Low-level map as a high-level value}
-Consider an \texttt{[int]int} map in Boogie.
+Consider an \lstinline[columns=fixed]{[int]int} map in Boogie.
 We want to canonically represent this in Isabelle as a value of level 1 (i.e., \isa{'a val1}).
 Unfortunately, there is nothing to prevent us from representing it as a map at level 3 (i.e., \isa{'a val3}), since level 3 structurally subsumes \isa{'a val0} in both its domain and range.
 Consequently, we possess multiple ways to represent the exact same semantic map.
@@ -549,7 +538,7 @@ To prevent this ambiguity, we enforce a strict type hierarchy: map types at leve
 \end{figure}
 
 \paragraph{Problem 2: Function behavior outside the domain}
-Consider the Boogie map \texttt{(lambda x: int :: x+1)}.
+Consider the Boogie map \lstinline[columns=fixed]{(lambda x: int :: x+1)}.
 In its Isabelle embedding, the domain is not rigidly constrained to integers only.
 Therefore, we might construct two maps that execute identically on integers but differ when applied to booleans.
 To guarantee extensionality, we must ensure that maps sharing the same Boogie behavior also execute identically outside their intended domain. 
@@ -691,7 +680,7 @@ We now formally define the select function for our map semantics. We begin with 
 \end{isabellebody}
 
 
-% \texttt{absval} is a type class, that is needed to call \texttt{type\_of\_val}.
+% \isa{absval} is a type class, that is needed to call \isa{type\_of\_val}.
 % This is addressed later in Section~\ref{sec:proofgen-module}.
 
 Consider the case \isa{"selectImplAux (InV2 (FunL m \_ \_)) (InV10 k) = InV210 (m k)"}.
@@ -734,7 +723,7 @@ The store operation follows a similar methodology, beginning with an auxiliary f
 \end{isabellebody}
 
 As before, we pattern-match across each map level and its corresponding supported key levels.
-However, rather than function application, we execute a function update (\texttt{k := v}).
+However, rather than function application, we execute a function update (\lstinline[columns=fixed]{k := v}).
 If the key level is absent from the domain, or if the update targets a primitive value, the function safely returns the unmodified value.
 
 The actual \isa{storeImpl} function performs a critical additional check beyond basic type conversion:
@@ -893,86 +882,116 @@ The proposed solution is now ready to be integrated in the other parts of the se
 
 \subsection{Abstract Value Type Function}
 
-A crucial detail omitted in previous sections concerns the \texttt{type\_of\_val} function, which previously required an additional parameter to determine the type of an abstract value.
+A crucial detail omitted in previous sections concerns the \isa{type\_of\_val} function, which previously required an additional parameter to determine the type of an abstract value.
 This parameter was necessary because abstract types are user-defined and cannot be known in advance.
 Consequently, the behavior for abstract values was captured as a function passed explicitly throughout the semantics.
 
-\begin{verbatim}
-type_synonym 'a absval_ty_fun = "'a => (tcon_id x ty list)"
+% type_synonym 'a absval_ty_fun = "'a => (tcon_id x ty list)"
 
-fun type_of_val :: "'a absval_ty_fun => 'a val => ty"
-  where 
-   "type_of_val A (LitV v) = TPrim (type_of_lit v)"
- | "type_of_val A (AbsV v) = TCon (fst (A v)) (snd (A v))"
-\end{verbatim}
-
+% fun type_of_val :: "'a absval_ty_fun => 'a val => ty"
+%   where 
+%    "type_of_val A (LitV v) = TPrim (type_of_lit v)"
+%  | "type_of_val A (AbsV v) = TCon (fst (A v)) (snd (A v))"
 \begin{isabellebody}\isanewline
-    
+\isakeywordONE{type\_synonym} 'a absval\_ty\_fun = "'a {\isasymRightarrow} (tcon\_id \isasymtimes ty list)"\isanewline
+\isanewline
+\isakeywordONE{fun} type\_of\_val :: "'a absval\_ty\_fun {\isasymRightarrow} 'a val {\isasymRightarrow} ty"\isanewline
+\ \isakeywordONE{where} \isanewline
+\ \ \ "type\_of\_val A (LitV v) = TPrim (type\_of\_lit v)"\isanewline
+\ | "type\_of\_val A (AbsV v) = TCon (fst (A v)) (snd (A v))"\isanewline
 \end{isabellebody}
 
 
-This design presents a significant hurdle because \texttt{type\_of\_val} is an integral part of the well-formedness (\texttt{wf}) predicate,
-which in turn defines our constrained type \texttt{'a wf\_val} \ref{sec:constrained-types}.
-In Isabelle/HOL, a type definition (typedef) cannot depend on a dynamic term or value like \texttt{absval\_ty\_fun}.
+This design presents a significant hurdle because \isa{type\_of\_val} is an integral part of the well-formedness (\isa{wf}) predicate,
+which in turn defines our constrained type \isa{'a wf\_val} \ref{sec:constrained-types}.
+In Isabelle/HOL, a type definition (typedef) cannot depend on a dynamic term or value like \isa{absval\_ty\_fun}.
 Furthermore, typedef commands are not permitted inside a locale context. \ref{sec:isabelle}
 
 To resolve this, we leverage Isabelle type classes.
-By restricting our type parameter \texttt{'a} using a type class,
+By restricting our type parameter \isa{'a} using a type class,
 we guarantee the existence of the required function at the type level:
 
-\begin{verbatim}
-class absval =
-  fixes absval_ty :: "'a => (tcon_id x ty list)"
+% class absval =
+%   fixes absval_ty :: "'a => (tcon_id x ty list)"
 
-fun type_of_val :: "('a::absval, 'm) val => ty"
-  where
-   "type_of_val (LitV v) = TPrim (type_of_lit v)"
- | "type_of_val (AbsV v) = TCon (fst (absval_ty v)) (snd (absval_ty v))"
-\end{verbatim}
-
+% fun type_of_val :: "('a::absval, 'm) val => ty"
+%   where
+%    "type_of_val (LitV v) = TPrim (type_of_lit v)"
+%  | "type_of_val (AbsV v) = TCon (fst (absval_ty v)) (snd (absval_ty v))"
 \begin{isabellebody}\isanewline
-    
+% class absval =
+\isakeywordONE{class}\isamarkupfalse%
+\ absval\ {\isacharequal}{\kern0pt}\isanewline
+\ \ \isakeywordTWO{fixes}\ absval{\isacharunderscore}{\kern0pt}ty\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ {\isasymRightarrow}\ {\isacharparenleft}{\kern0pt}tcon{\isacharunderscore}{\kern0pt}id\ {\isasymtimes}\ ty\ list{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+% fun type_of_val
+\isakeywordONE{fun}\isamarkupfalse%
+\ type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a{\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}absval{\isacharcomma}{\kern0pt}\ {\isacharprime}{\kern0pt}m{\isacharparenright}{\kern0pt}\ val\ {\isasymRightarrow}\ ty{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{where}\isanewline
+\ \ \ {\isachardoublequoteopen}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ {\isacharparenleft}{\kern0pt}LitV\ v{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ TPrim\ {\isacharparenleft}{\kern0pt}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}lit\ v{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ {\isacharparenleft}{\kern0pt}AbsV\ v{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ TCon\ {\isacharparenleft}{\kern0pt}fst\ {\isacharparenleft}{\kern0pt}absval{\isacharunderscore}{\kern0pt}ty\ v{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}snd\ {\isacharparenleft}{\kern0pt}absval{\isacharunderscore}{\kern0pt}ty\ v{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
 \end{isabellebody}
 
 
-Applying the type class \texttt{'a::absval} ensures the availability of the function \texttt{absval\_ty :: "'a => (tcon\_id x ty list)"},
+Applying the type class \isa{'a::absval} ensures the availability of the function \isa{absval\_ty :: "'a => (tcon\_id x ty list)"},
 effectively replacing the explicitly passed argument.
-For symmetry and modularity, we employ a similar type class, \texttt{mapval},
-to extract map types dependent on the type parameter \texttt{'m}.
+For symmetry and modularity, we employ a similar type class, \isa{mapval},
+to extract map types dependent on the type parameter \isa{'m}.
 
-\begin{verbatim}
-class absval =
-  fixes absval_ty :: "'a => (tcon_id x ty list)"
 
-class mapval =
-  fixes mapval_ty :: "'a => (ty x ty)"
+% class absval =
+%   fixes absval_ty :: "'a => (tcon_id x ty list)"
 
-fun type_of_val :: "('a::absval, 'm) val => ty"
-  where
-   "type_of_val (LitV v) = TPrim (type_of_lit v)"
- | "type_of_val (AbsV v) = TCon (fst (absval_ty v)) (snd (absval_ty v))"
- | "type_of_val (MapV v) = TMap (fst (mapval_ty v)) (snd (mapval_ty v))"
-\end{verbatim}
+% class mapval =
+%   fixes mapval_ty :: "'a => (ty x ty)"
 
+% fun type_of_val :: "('a::absval, 'm) val => ty"
+%   where
+%    "type_of_val (LitV v) = TPrim (type_of_lit v)"
+%  | "type_of_val (AbsV v) = TCon (fst (absval_ty v)) (snd (absval_ty v))"
+%  | "type_of_val (MapV v) = TMap (fst (mapval_ty v)) (snd (mapval_ty v))"
 \begin{isabellebody}\isanewline
-    
+\isakeywordONE{class}\isamarkupfalse%
+\ absval\ {\isacharequal}{\kern0pt}\isanewline
+\ \ \isakeywordTWO{fixes}\ absval{\isacharunderscore}{\kern0pt}ty\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ {\isasymRightarrow}\ {\isacharparenleft}{\kern0pt}tcon{\isacharunderscore}{\kern0pt}id\ {\isasymtimes}\ ty\ list{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isakeywordONE{class}\isamarkupfalse%
+\ mapval\ {\isacharequal}{\kern0pt}\isanewline
+\ \ \isakeywordTWO{fixes}\ mapval{\isacharunderscore}{\kern0pt}ty\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a\ {\isasymRightarrow}\ {\isacharparenleft}{\kern0pt}ty\ {\isasymtimes}\ ty{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isakeywordONE{fun}\isamarkupfalse%
+\ type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a{\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}absval{\isacharcomma}{\kern0pt}\ {\isacharprime}{\kern0pt}m{\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}mapval{\isacharparenright}{\kern0pt}\ val\ {\isasymRightarrow}\ ty{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{where}\isanewline
+\ \ \ {\isachardoublequoteopen}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ {\isacharparenleft}{\kern0pt}LitV\ v{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ TPrim\ {\isacharparenleft}{\kern0pt}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}lit\ v{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ {\isacharparenleft}{\kern0pt}AbsV\ v{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ TCon\ {\isacharparenleft}{\kern0pt}fst\ {\isacharparenleft}{\kern0pt}absval{\isacharunderscore}{\kern0pt}ty\ v{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}snd\ {\isacharparenleft}{\kern0pt}absval{\isacharunderscore}{\kern0pt}ty\ v{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ {\isacharparenleft}{\kern0pt}MapV\ v{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ TMap\ {\isacharparenleft}{\kern0pt}fst\ {\isacharparenleft}{\kern0pt}mapval{\isacharunderscore}{\kern0pt}ty\ v{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}snd\ {\isacharparenleft}{\kern0pt}mapval{\isacharunderscore}{\kern0pt}ty\ v{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
 \end{isabellebody}
 
 
 With that we can actually define our new value type:
 
-\begin{verbatim}
-definition wf_map_set :: "'a::absval val321 set" where
-"wf_map_set = {m. wf (MapV m)}"
+% definition wf_map_set :: "'a::absval val321 set" where
+% "wf_map_set = {m. wf (MapV m)}"
 
-typedef (overloaded) 'a::absval wf_maps = "wf_map_set :: 'a::absval val321 set"
-<proof>
+% typedef (overloaded) 'a::absval wf_maps = "wf_map_set :: 'a::absval val321 set"
+% <proof>
 
-type_synonym 'a wf_val = "('a, 'a wf_maps) val"
-\end{verbatim}
-
-\begin{isabellebody}\isanewline
-    
+% type_synonym 'a wf_val = "('a, 'a wf_maps) val"
+\begin{isabellebody}
+% definition wf_map_set
+\isakeywordONE{definition}\isamarkupfalse%
+\ wf{\isacharunderscore}{\kern0pt}map{\isacharunderscore}{\kern0pt}set\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}a{\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}absval\ val{\isadigit{3}}{\isadigit{2}}{\isadigit{1}}\ set{\isachardoublequoteclose}\ \isakeywordTWO{where}\isanewline
+\ \ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}map{\isacharunderscore}{\kern0pt}set\ {\isacharequal}{\kern0pt}\ {\isacharbraceleft}{\kern0pt}m{\isachardot}{\kern0pt}\ wf\ {\isacharparenleft}{\kern0pt}MapV\ m{\isacharparenright}{\kern0pt}{\isacharbraceright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+% typedef wf_maps
+\isakeywordONE{typedef}\isamarkupfalse%
+\ {\isacharparenleft}{\kern0pt}\isakeywordTWO{overloaded}{\isacharparenright}{\kern0pt}\ {\isacharprime}{\kern0pt}a{\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}absval\ wf{\isacharunderscore}{\kern0pt}maps\isanewline
+\ \ \ {\isacharequal}{\kern0pt}\ {\isachardoublequoteopen}wf{\isacharunderscore}{\kern0pt}map{\isacharunderscore}{\kern0pt}set\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isacharprime}{\kern0pt}a{\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}absval\ val{\isadigit{3}}{\isadigit{2}}{\isadigit{1}}\ set{\isachardoublequoteclose}\isanewline
+\ <proof> (* witness for non-empty type *)\isanewline
+\isanewline
+% type_synonym 'a wf_val
+\isakeywordONE{type{\isacharunderscore}{\kern0pt}synonym}\isamarkupfalse%
+\ {\isacharprime}{\kern0pt}a\ wf{\isacharunderscore}{\kern0pt}val\ {\isacharequal}{\kern0pt}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a{\isacharcomma}{\kern0pt}\ {\isacharprime}{\kern0pt}a\ wf{\isacharunderscore}{\kern0pt}maps{\isacharparenright}{\kern0pt}\ val{\isachardoublequoteclose}%
 \end{isabellebody}
 
 
@@ -984,27 +1003,38 @@ specifically defining how map selection and storage reduce.
 To preserve modularity and hide implementation details from the broader semantics,
 we encapsulate the reduction logic within an Isabelle locale. \ref{sec:isabelle}
 
-\begin{verbatim}
-[TODO transform]
+% locale semantics =
+%   fixes map_select :: "('a::absval, 'm::mapval) val => ('a, 'm) val => ('a, 'm) val"
+%   fixes map_store  :: "('a, 'm) val => ('a, 'm) val => ('a, 'm) val => ('a, 'm) val"
+% begin
 
-locale semantics =
-  fixes map_select :: "('a::absval, 'm::mapval) val => ('a, 'm) val => ('a, 'm) val"
-  fixes map_store  :: "('a, 'm) val => ('a, 'm) val => ('a, 'm) val => ('a, 'm) val"
-begin
+% (* ... *)
 
-  | RedMapSelect: "[[ \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e1, n_s\<rangle> \<Down> v1;
-                \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e2, n_s\<rangle> \<Down> v2;
-                map_select v1 v2 = v ]] \<Longrightarrow>
-             \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>MapSelect e1 e2, n_s\<rangle> \<Down> v"
-  | RedMapStore: "[[ \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e1, n_s\<rangle> \<Down> v1;
-                \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e2, n_s\<rangle> \<Down> v2;
-                \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e3, n_s\<rangle> \<Down> v3;
-                map_store v1 v2 v3 = v ]] \<Longrightarrow>
-             \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>MapStore e1 e2 e3, n_s\<rangle> \<Down> v"
-\end{verbatim}
-
+%   | RedMapSelect:
+%   | RedMapStore:
 \begin{isabellebody}\isanewline
-    
+\isakeywordONE{locale}\isamarkupfalse%
+\ semantics\ {\isacharequal}{\kern0pt}\isanewline
+\ \ \isakeywordTWO{fixes}\ map{\isacharunderscore}{\kern0pt}select\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\isanewline 
+\ \ \ \ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a{\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}absval{\isacharcomma}{\kern0pt}\ {\isacharprime}{\kern0pt}m{\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}mapval{\isacharparenright}{\kern0pt}\ val\ {\isasymRightarrow}\ {\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a{\isacharcomma}{\kern0pt}\ {\isacharprime}{\kern0pt}m{\isacharparenright}{\kern0pt}\ val\ {\isasymRightarrow}\ {\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a{\isacharcomma}{\kern0pt}\ {\isacharprime}{\kern0pt}m{\isacharparenright}{\kern0pt}\ val{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{fixes}\ map{\isacharunderscore}{\kern0pt}store\ \ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\isanewline 
+\ \ \ \ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a{\isacharcomma}{\kern0pt}\ {\isacharprime}{\kern0pt}m{\isacharparenright}{\kern0pt}\ val\ {\isasymRightarrow}\ {\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a{\isacharcomma}{\kern0pt}\ {\isacharprime}{\kern0pt}m{\isacharparenright}{\kern0pt}\ val\ {\isasymRightarrow}\ {\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a{\isacharcomma}{\kern0pt}\ {\isacharprime}{\kern0pt}m{\isacharparenright}{\kern0pt}\ val\ {\isasymRightarrow}\ {\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a{\isacharcomma}{\kern0pt}\ {\isacharprime}{\kern0pt}m{\isacharparenright}{\kern0pt}\ val{\isachardoublequoteclose}\isanewline
+\isakeywordTWO{begin}\isanewline
+\isanewline
+(* ... *) \isanewline
+\isanewline
+(* big-step semantics definition *) \isanewline
+\ \ (* ... *) \isanewline
+\ \ {\isacharbar}{\kern0pt}\ RedMapSelect{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isasymlbrakk}\ {\isasymLambda}{\isacharcomma}{\kern0pt}{\isasymGamma}{\isacharcomma}{\kern0pt}{\isasymOmega}\ {\isasymturnstile}\ {\isasymlangle}e{\isadigit{1}}{\isacharcomma}{\kern0pt}\ n{\isacharunderscore}{\kern0pt}s{\isasymrangle}\ {\isasymDown}\ v{\isadigit{1}}{\isacharsemicolon}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ {\isasymLambda}{\isacharcomma}{\kern0pt}{\isasymGamma}{\isacharcomma}{\kern0pt}{\isasymOmega}\ {\isasymturnstile}\ {\isasymlangle}e{\isadigit{2}}{\isacharcomma}{\kern0pt}\ n{\isacharunderscore}{\kern0pt}s{\isasymrangle}\ {\isasymDown}\ v{\isadigit{2}}{\isacharsemicolon}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ map{\isacharunderscore}{\kern0pt}select\ v{\isadigit{1}}\ v{\isadigit{2}}\ {\isacharequal}{\kern0pt}\ v{\isasymrbrakk}\ {\isasymLongrightarrow}\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ {\isasymLambda}{\isacharcomma}{\kern0pt}{\isasymGamma}{\isacharcomma}{\kern0pt}{\isasymOmega}\ {\isasymturnstile}\ {\isasymlangle}\ MapSelect\ e{\isadigit{1}}\ e{\isadigit{2}}{\isacharcomma}{\kern0pt}\ n{\isacharunderscore}{\kern0pt}s\ {\isasymrangle}\ {\isasymDown}\ v{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ RedMapStore{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isasymlbrakk}\ {\isasymLambda}{\isacharcomma}{\kern0pt}{\isasymGamma}{\isacharcomma}{\kern0pt}{\isasymOmega}\ {\isasymturnstile}\ {\isasymlangle}e{\isadigit{1}}{\isacharcomma}{\kern0pt}\ n{\isacharunderscore}{\kern0pt}s{\isasymrangle}\ {\isasymDown}\ v{\isadigit{1}}{\isacharsemicolon}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ {\isasymLambda}{\isacharcomma}{\kern0pt}{\isasymGamma}{\isacharcomma}{\kern0pt}{\isasymOmega}\ {\isasymturnstile}\ {\isasymlangle}e{\isadigit{2}}{\isacharcomma}{\kern0pt}\ n{\isacharunderscore}{\kern0pt}s{\isasymrangle}\ {\isasymDown}\ v{\isadigit{2}}{\isacharsemicolon}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ {\isasymLambda}{\isacharcomma}{\kern0pt}{\isasymGamma}{\isacharcomma}{\kern0pt}{\isasymOmega}\ {\isasymturnstile}\ {\isasymlangle}e{\isadigit{3}}{\isacharcomma}{\kern0pt}\ n{\isacharunderscore}{\kern0pt}s{\isasymrangle}\ {\isasymDown}\ v{\isadigit{3}}{\isacharsemicolon}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ map{\isacharunderscore}{\kern0pt}store\ v{\isadigit{1}}\ v{\isadigit{2}}\ v{\isadigit{3}}\ {\isacharequal}{\kern0pt}\ v{\isasymrbrakk}\ {\isasymLongrightarrow}\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ {\isasymLambda}{\isacharcomma}{\kern0pt}{\isasymGamma}{\isacharcomma}{\kern0pt}{\isasymOmega}\ {\isasymturnstile}\ {\isasymlangle}\ MapStore\ e{\isadigit{1}}\ e{\isadigit{2}}\ e{\isadigit{3}}{\isacharcomma}{\kern0pt}\ n{\isacharunderscore}{\kern0pt}s\ {\isasymrangle}\ {\isasymDown}\ v{\isachardoublequoteclose}\isanewline
+\ \ (* ... *) \isanewline
 \end{isabellebody}
 
 
@@ -1015,16 +1045,17 @@ we retain the flexibility to swap out map implementations in the future
 When applying the semantics to a specific map model, we simply instantiate the locale,
 at which point all localized theorems and lemmas become available in the global context.
 
-\begin{verbatim}
-  interpretation semantics wf_select wf_store .
-\end{verbatim}
-
+% interpretation semantics wf_select wf_store
+% using ... by blast
 \begin{isabellebody}\isanewline
-    
+\isakeywordONE{interpretation}\isamarkupfalse%
+\ semantics\ wf{\isacharunderscore}{\kern0pt}select\ wf{\isacharunderscore}{\kern0pt}store\ {\isadigit{3}}\isanewline
+\isakeywordONE{using}\ (* ... *) \isakeywordONE{by}\isamarkupfalse%
+\ blast%
 \end{isabellebody}
 
 
-Importantly, this instantiation must occur before defining automated proof tactic methods in \texttt{ML},
+Importantly, this instantiation must occur before defining automated proof tactic methods in \isakeywordONE{ML},
 as theorems referenced inside a locale behave differently when evaluated in an instantiated context.
 
 
@@ -1040,13 +1071,12 @@ because even concrete map values are parameterized by types.}
 and that a concrete value exists for every closed type,
 as defined by Boogie \cite{leino2008boogie}.
 
-\begin{verbatim}
-  Closed: "(ALL v. (closed ((type_of_val ) v)))" and 
-  NonEmptyTypes: "(ALL t. ((closed t) ==> (EXISTS v. (((type_of_val ) v) = t))))" 
-\end{verbatim}
-
+% Closed: "(ALL v. (closed ((type_of_val ) v)))" and 
+% NonEmptyTypes: "(ALL t. ((closed t) ==> (EXISTS v. (((type_of_val ) v) = t))))" 
 \begin{isabellebody}\isanewline
-    
+Closed{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\kern0pt}{\isasymAnd}{\kern0pt}v{\isachardot}{\kern0pt}\ closed\ {\isacharparenleft}{\kern0pt}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ v{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+NonEmptyTypes{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isasymAnd}t{\isachardot}{\kern0pt}\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}closed\ t{\isacharparenright}{\kern0pt}
+{\isasymLongrightarrow}\ {\isacharparenleft}{\kern0pt}{\isasymexists}v{\isachardot}{\kern0pt}\ type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ v\ {\isacharequal}{\kern0pt}\ t{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\ \isanewline
 \end{isabellebody}
 
 
@@ -1056,26 +1086,37 @@ To prevent the introduction of contradictory assumptions, we weaken the non-empt
 We achieve this by defining a maximum supported map level within the semantics locale
 and restricting the quantification of the non-emptiness axiom to types that do not exceed this threshold.
 
+% locale semantics =
+%   fixes map_select :: "('a::absval, 'm::mapval) val => ('a, 'm) val => ('a, 'm) val"
+%   fixes map_store  :: "('a, 'm) val => ('a, 'm) val => ('a, 'm) val => ('a, 'm) val"
+%   fixes maxmaplvl :: nat
+%   assumes "ALL v::('a, 'm) val. tmap_lvl (type_of_val v) <= maxmaplvl"
+% begin
 
-\begin{verbatim}
-locale semantics =
-  fixes map_select :: "('a::absval, 'm::mapval) val => ('a, 'm) val => ('a, 'm) val"
-  fixes map_store  :: "('a, 'm) val => ('a, 'm) val => ('a, 'm) val => ('a, 'm) val"
-  fixes maxmaplvl :: nat
-  assumes "ALL v::('a, 'm) val. tmap_lvl (type_of_val v) <= maxmaplvl"
-begin
+% abbreviation valid_closed
+%   where "valid_closed t == (closed t AND tmap_lvl t <= maxmaplvl)"
 
-abbreviation valid_closed
-  where "valid_closed t == (closed t AND tmap_lvl t <= maxmaplvl)"
+% (* ... *)
 
-(* ... *)
-
-  Closed: "(ALL v. (valid_closed ((type_of_val ) v)))" and 
-  NonEmptyTypes: "(ALL t. ((valid_closed t) ==> (EXISTS v. (((type_of_val ) v) = t))))" 
-\end{verbatim}
-
+%   Closed: "(ALL v. (valid_closed ((type_of_val ) v)))" and 
+%   NonEmptyTypes: "(ALL t. ((valid_closed t) ==> (EXISTS v. (((type_of_val ) v) = t))))" 
 \begin{isabellebody}\isanewline
-    
+\isakeywordONE{locale}\isamarkupfalse%
+\ semantics\ {\isacharequal}{\kern0pt}\isanewline
+\ \ (* ... map\_select \& map\_store ... *) \isanewline
+\ \ \isakeywordTWO{fixes}\ maxmaplvl\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ nat\isanewline
+\ \ \isakeywordTWO{assumes}\ {\isachardoublequoteopen}{\isasymAnd}v{\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}{\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a{\isacharcomma}{\kern0pt}\ {\isacharprime}{\kern0pt}m{\isacharparenright}{\kern0pt}\ val{\isachardot}{\kern0pt}\ tmap{\isacharunderscore}{\kern0pt}lvl\ {\isacharparenleft}{\kern0pt}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ v{\isacharparenright}{\kern0pt}\ {\isasymle}\ maxmaplvl{\isachardoublequoteclose}\isanewline
+\isakeywordTWO{begin}\isanewline
+\isanewline
+% valid_closed
+\isakeywordONE{abbreviation}\isamarkupfalse%
+\ valid{\isacharunderscore}{\kern0pt}closed\isanewline
+\ \ \isakeywordTWO{where}\ {\isachardoublequoteopen}valid{\isacharunderscore}{\kern0pt}closed\ t\ {\isasymequiv}\ {\isacharparenleft}{\kern0pt}closed\ t\ {\isasymand}\ tmap{\isacharunderscore}{\kern0pt}lvl\ t\ {\isasymle}\ maxmaplvl{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+(* Generated Proof Assumption *) \isanewline
+Closed{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\kern0pt}{\isasymAnd}{\kern0pt}v{\isachardot}{\kern0pt}\ valid{\isacharunderscore}{\kern0pt}closed\ {\isacharparenleft}{\kern0pt}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ v{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+NonEmptyTypes{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isasymAnd}t{\isachardot}{\kern0pt}\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}valid{\isacharunderscore}{\kern0pt}closed\ t{\isacharparenright}{\kern0pt}
+{\isasymLongrightarrow}\ {\isacharparenleft}{\kern0pt}{\isasymexists}v{\isachardot}{\kern0pt}\ type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}val\ v\ {\isacharequal}{\kern0pt}\ t{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\ \isanewline
 \end{isabellebody}
 
 
@@ -1086,16 +1127,16 @@ Lastly, we adjusted the proof generation module to show that the types used in t
 \label{sec:adjust-foundational}
 
 Integrating map constructors across the foundational datatypes required updating subsequent definitions and proofs.
-The two most pervasive syntactic changes were expanding the value type from \texttt{'a val} to \texttt{('a, 'm) val}
-and removing the obsolete \texttt{A::absval\_ty\_fun} argument.
-Furthermore, bounded quantifiers in proofs required explicit type constraints (e.g., \texttt{$\forall$ v :: ('a, 'm) val})
+The two most pervasive syntactic changes were expanding the value type from \isa{'a val} to \isa{('a, 'm) val}
+and removing the obsolete \isa{A::absval\_ty\_fun} argument.
+Furthermore, bounded quantifiers in proofs required explicit type constraints (e.g., \isa{\isasymforall v :: ('a, 'm) val})
 to prevent Isabelle from overly generalizing lemmas with fresh type variables.
 
 On the C\# side, the proof generation module was updated to handle the new map cases.
 Because map type constructors use the same VC encoding mechanisms as abstract value constructors under the predicate type encoding,
-we introduced specific string-matching logic to isolate constructors prefixed with \texttt{MapType}.
+we introduced specific string-matching logic to isolate constructors prefixed with \isa{MapType}.
 Finally, the C\# module was updated to generate proof steps that invoke our new map semantics lemmas
-and to use the constrained \texttt{'a wf\_val} type.
+and to use the constrained \isa{'a wf\_val} type.
 
 As mentioned in Section~\ref{sec:our-vc-change}, we needed to weaken one of the map axioms.
 Notably, this modification alters the main Boogie code itself, not just the additional proof generation module.
@@ -1104,15 +1145,15 @@ Additionally, because there are now more VC axioms that must be satisfied
 (as described in Section~\ref{sec:vc-map-axioms}),
 we must generate the corresponding proof steps to invoke our map semantics lemmas.
 
-Naturally, we also transitioned to the new value type \texttt{'a wf\_val}
+Naturally, we also transitioned to the new value type \isa{'a wf\_val}
 everywhere the old value type was used, including within bounded quantifiers,
-and removed all occurrences of \texttt{A::absval\_ty\_fun} in the generated definitions and proofs.
+and removed all occurrences of \isa{A::absval\_ty\_fun} in the generated definitions and proofs.
 
 
 \subsection{Automatic Proof Tactics for Maps}
 \label{sec:proof-tactics-map}
 
-Currently, map-related proof obligations are discharged using custom \texttt{ML} tactics.
+Currently, map-related proof obligations are discharged using custom \isakeywordONE{ML} tactics.
 Due to time constraints, exhaustive tactic automation was deferred.
 However, we successfully extended the global lemma collection to automatically verify a subset of map operations.
-Expanding these \texttt{ML} tactics remains a promising avenue for future work.
+Expanding these \isakeywordONE{ML} tactics remains a promising avenue for future work.
