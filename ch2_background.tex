@@ -5,10 +5,10 @@
 \section{Boogie Language}
 
 An excellent resource for the Boogie language is the paper by K. Rustan M. Leino \cite{leino2008boogie},
-which is officially linked on the Boogie GitHub page.
-\footnote{\url{https://github.com/boogie-org/boogie}}
+which is officially linked on the Boogie GitHub page
+\footnote{\url{https://github.com/boogie-org/boogie}}.
 Unfortunately, the paper is no longer entirely up-to-date with the modern development of the language.
-\footnote{\url{https://boogie-docs.readthedocs.io/en/latest/LangRef.html\#inconsistent-assumptions}}\textsuperscript{,}
+\footnote{\url{https://boogie-docs.readthedocs.io/en/latest/LangRef.html}}\textsuperscript{,}
 \footnote{\url{https://github.com/dafny-lang/dafny/issues/4005\#issuecomment-1570363166}}
 Nevertheless, it remains a solid starting point, as it is the most comprehensive reference available.
 
@@ -16,7 +16,7 @@ Nevertheless, it remains a solid starting point, as it is the most comprehensive
 This language is similar in style to Viper and Dafny, but it includes fewer high-level features.
 It resembles a procedural language, featuring assignments, control-flow statements (\lstinline[columns=fixed]{if}, \lstinline[columns=fixed]{while}, \lstinline[columns=fixed]{goto}),
 and side-effect-free functions and procedures, which may be polymorphic.
-As an Intermediate Verification Language (IVL), it also includes \lstinline[columns=fixed]{assume}, \lstinline[columns=fixed]{assert},
+As an IVL, it also includes \lstinline[columns=fixed]{assume}, \lstinline[columns=fixed]{assert},
 and \lstinline[columns=fixed]{axiom} statements that may use quantifiers.
 These constructs are used to encode specifications that define the intended correct behavior of the program.
 We will not delve too deeply into the specific details of the language here,
@@ -133,8 +133,7 @@ Importantly, it is \textbf{not} analogous to a dictionary or an association list
 Boogie supports more complex map types as well.
 Maps can take multiple keys, referred to as multi-arity maps.
 Furthermore, the domain and range types can themselves be maps, enabling nested map structures.
-However, multi-arity maps are generally discouraged according to this documentation,
-\footnote{\url{https://boogie-docs.readthedocs.io/en/latest/LangRef.html\#inconsistent-assumptions}}
+However, multi-arity maps are generally discouraged according to this documentation~\footnote{\url{https://boogie-docs.readthedocs.io/en/latest/LangRef.html\#map-types}},
 as they can be structurally transformed into nested, single-arity maps.
 
 \begin{lstlisting}[caption={Multi-Arity Boogie Map Example}]
@@ -150,8 +149,7 @@ procedure complex ()
 }
 \end{lstlisting}
 
-Maps can also be polymorphic, meaning they can accept type parameters:
-
+Maps can also be polymorphic, meaning they can accept type parameters:\footnote{Examples taken and adapted from \url{https://ethz.ch/content/dam/ethz/special-interest/infk/chair-program-method/pm/documents/Education/Courses/SS2017/Program\%20Verification/08-Boogie.pdf}.}
 \begin{lstlisting}[caption={Polymorphic Boogie Map Example}]
 procedure poly ()
 {
@@ -163,7 +161,7 @@ procedure poly ()
 }
 \end{lstlisting}
 
-\footnote{Examples taken and adapted from \url{https://ethz.ch/content/dam/ethz/special-interest/infk/chair-program-method/pm/documents/Education/Courses/SS2017/Program\%20Verification/08-Boogie.pdf}.}
+
 
 This is a highly powerful feature. However, fully supporting it lies outside the scope of this thesis, as outlined in our goals (Section~\ref{sec:goals-to-support}).
 
@@ -175,7 +173,7 @@ We build upon the prior work established by Parthasarathy et al.~\cite{parthasar
 Proving the complete implementation of the Boogie verifier end-to-end would be a monumental task,
 as it is a large, complex, and constantly evolving codebase.
 Therefore, the approach taken by the prior work is to validate individual verification runs instead.
-The goal is to formally prove that the validity of the outputted Verification Condition (VC)
+The goal is to formally prove that the validity of the outputted VC
 mathematically implies the correctness of the input program.
 To achieve this, we must precisely define what it means for a Boogie program to be "correct".
 This requires formal semantics dictating Boogie's exact behavior.
@@ -225,11 +223,33 @@ See Figure~\ref{fig:proofgen-pipeline} for an illustrative diagram of this archi
 \end{figure}
 
 
+\section{SMT and SMT-LIB}
+SMT stands for Satisfiability Modulo Theories \cite{barrett2010smt}.
+It is a decision problem used to determine whether a mathematical formula is satisfiable under practical background theories,
+which help model common structures such as arrays or real numbers.
+This format is used to encode the VC output of the Boogie verifier,
+and SMT solvers are used to determine if such a formula is valid.
+
+The language is standardized as SMT-LIB.
+Extensive documentation can be found in "The SMT-LIB Standard" paper~\cite{barrett2010smt},
+and various online resources provide comprehensive tutorials on writing and evaluating SMT queries.~\footnote{\url{https://www.philipzucker.com/z3-rise4fun/guide.html}}~\textsuperscript{,}~\footnote{\url{https://microsoft.github.io/z3guide/docs/theories/Arrays/}}\textsuperscript{,}~\footnote{\url{https://theory.stanford.edu/\~nikolaj/programmingz3.html}}
+
+
 \section{Type Encoding \& Map Extensionality}
 \label{sec:type-encoding}
 
-Boogie provides three different ways to encode types in polymorphic programs,
-as detailed by the \texttt{boogie /help} command:
+When an input program utilizes polymorphism, such as polymorphic functions, procedures, or maps,
+the Boogie verifier must decide how to represent these types within the VC.
+Because SMT solvers usually operate on fixed, monomorphic sorts, the verifier must apply a strategy to "encode" these polymorphic types.
+
+There are two primary approaches to this encoding:
+\begin{itemize}
+\item \textbf{Predicate Type Encoding:} The verifier creates a single universal \emph{sort} in the VC to represent all values and another for all types. Each type from the input program is represented as a constant, and a global \texttt{type} function is used to map values to their respective types. This keeps the logic polymorphic but relies on axioms to govern type safety.
+\item \textbf{Monomorphic Type Encoding:} The verifier creates a distinct \emph{sort} in the VC for every concrete type used in the program. This process, often called monomorphization, effectively "flattens" the polymorphism by generating a specific version of the code for each type instantiation.
+\end{itemize}
+
+There is also a third way, arguments type encoding, but which is not relevant for us.
+We can configure these encodings using the Boogie CLI, as detailed by the \texttt{boogie /help} command:
 
 \begin{lstlisting}[language=make, numbers=none,
 caption={\texttt{boogie /help} output}]
@@ -247,8 +267,8 @@ Over time, the default setting has changed from predicate to monomorphic type en
 \footnote{\url{https://github.com/boogie-org/boogie/pull/732}}
 The prior work was built when predicate type encoding was the default,
 and it functions best under this configuration.
-According to the documentation of the prior work,
-\footnote{\url{https://github.com/viperproject/boogie-proofgen/?tab=readme-ov-file\#supported-subset}}
+According to the documentation of the prior work
+\footnote{\url{https://github.com/viperproject/boogie-proofgen/?tab=readme-ov-file\#supported-subset}},
 it does not support type declarations under other encodings,
 as they fundamentally alter the structure of the resulting VC.
 
@@ -261,8 +281,7 @@ Otherwise, the Boogie verifier will override the command-line option and forcefu
 The chosen type encoding also profoundly impacts the VC representation of maps,
 even if those maps are monomorphic.
 A key difference is that the monomorphic type encoding allows maps to be modeled directly via SMT arrays.
-Because SMT arrays are inherently extensional, it follows that under this encoding, Boogie maps are extensional as well.
-\footnote{This contradicts an outdated assertion in the paper "This is Boogie 2" \cite{leino2008boogie}, which claims maps are not guaranteed to be extensional.}
+Because SMT arrays are inherently extensional, it follows that under this encoding, Boogie maps are extensional as well.\footnote{This contradicts an outdated assertion in the paper "This is Boogie 2" \cite{leino2008boogie}, which claims maps are not guaranteed to be extensional.}
 Extensionality implies that two maps are considered equal if they behave identically,
 meaning if for all keys in their domain, the select operation yields the same return value.
 
@@ -296,7 +315,7 @@ Let us examine the overall structure of the Isabelle embedding of the generated 
 
 
 This structure forms a logical implication:
-a model fulfilling a specific set of assumptions implies a Weakest Precondition (WP).
+a model fulfilling a specific set of assumptions implies a weakest precondition (WP).
 This weakest precondition is essential for demonstrating the correctness of the input program.
 Therefore, our formal semantic modeling of Boogie must rigorously satisfy these assumptions,
 providing clear formal targets that the semantics must achieve.
@@ -379,32 +398,18 @@ This stability axiom demonstrates that storing a value at one position
 does not inadvertently alter the values at other positions.
 
 
-\section{SMT and SMT-LIB}
-SMT stands for Satisfiability Modulo Theories \cite{barrett2010smt}.
-It is a decision problem used to determine whether a mathematical formula is satisfiable under practical background theories,
-which help model common structures such as arrays or real numbers.
-This format is used to encode the VC output of the Boogie verifier.
-
-The language is standardized as SMT-LIB.
-Extensive documentation can be found in "The SMT-LIB Standard" paper~\cite{barrett2010smt},
-and various online resources provide comprehensive tutorials on writing and evaluating SMT queries.
-\footnote{\url{https://www.philipzucker.com/z3-rise4fun/guide.html}}\textsuperscript{,}
-\footnote{\url{https://microsoft.github.io/z3guide/docs/theories/Arrays/}}\textsuperscript{,}
-\footnote{\url{https://theory.stanford.edu/\~nikolaj/programmingz3.html}}
-
-
-\section{Interactive Theorem Provers (ITPs)}
+\section{Isabelle/HOL}
+\label{sec:isabelle} 
 
 The proof generation module produces its certificates in the proof language of Isabelle/HOL.
 Isabelle/HOL is an Interactive Theorem Prover (ITP).
 Other prominent ITPs include Rocq\footnote{\url{https://rocq-prover.org/}}
-\cite{huet1997coq}
+\cite{huet1997coq} (formerly known as Coq)
 and Lean\footnote{\url{https://lean-lang.org/}} \cite{de2015lean}.
 These systems assist in the mechanical construction of mathematical proofs on a computer
 and rigidly verify that the mechanized proofs are logically sound.
 
-\subsection{Isabelle/HOL}
-\label{sec:isabelle} 
+\paragraph{Isabelle/HOL}
 In contrast to many other ITPs, Isabelle/HOL is not based on dependent type theory.
 Isabelle itself serves as a generic meta-framework used to build specific logical systems.
 Isabelle/HOL is one such implementation, where HOL stands for Higher-Order Logic.

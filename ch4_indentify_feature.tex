@@ -1,4 +1,4 @@
-\chapter{Selecting Feature to Support}
+\chapter{Identifying Usage of Boogie Features}
 \label{sec:unsupported-usage}
 
 The prior work layed extensive fundamental work in supporting a subset of Boogie programs.
@@ -22,7 +22,7 @@ as we do not expect to fully support Boogie maps in all its glory.
 
 \section{List of unsupported features}
 
-\paragraph{Subsetchecker and Source Code.} Before deciding on which feature to choose,
+\paragraph{Subset Checker and Source Code.} Before deciding on which feature to choose,
 we need to want a list of unsupported from which we choose the feature we want to work on.
 To find more unsupported feature, we looked at the source code of the proof generation module.
 Fortunately, there exists a subset checker, that looks for any unsupported feature,
@@ -54,12 +54,12 @@ One could argue, that the feature that should be implemented next, would be name
 \section{Evaluating Feautures}
 
 Now we need a way to evaluate these choices.
-One quick way to evaluate is to abuse the existing subsetchecker to collect usages.
-This limits us to mainly analyze the ones listed in the subsetchecker.
+One quick way to evaluate is to abuse the existing subset checker to collect usages.
+This limits us to mainly analyze the ones listed in the checker.
 Again, we already have an idea which features we could chose to support,
 so we do not want to spend too much time with the analysis,
 and the list already contains some good features to extend.
-Currently, the subsetchecker collects the first unsupported feature and reports it.
+Currently, the subset checker collects the first unsupported feature and reports it.
 With little change, we can actually report every unsupported featuer appearing in the input.
 We then group what we consider the same limitation together, such that each limitation is reported only once per input Boogie program.
 Then we run this process for all tests and see, which unsupported feature appears in the most of them.
@@ -101,10 +101,10 @@ quite a sizeable portion \lstinline[columns=fixed]{free} and
 and few use Bitvectors.
 
 
-\subsection{Why Maps in every Dafny Test?}
+\subsection{Map Usage in Dafny Tests}
 
 It is surprising, that all input programs (that reach the subset checker) use maps.
-The reason becomed clear, when one tries to compile a very simple Dafny program:
+The reason becomes clear, when one tries to compile a very simple Dafny program:
 
 \begin{lstlisting}[caption={Simple Dafny Program}]
 method Succeeds() {

@@ -1,35 +1,39 @@
 \chapter{Introduction}
 
+Program verification is a field in computer science that aims to mathematically prove the \emph{correctness} of software.
+Correctness, in this context, meaning that a program's behavior satisfies a given specification under a defined set of assumptions.
+For example, verifying a sorting algorithm involves proving that it genuinely produces a non-decreasing sequence, that all initial elements are preserved in the result, and that no additional elements are introduced.
+Program correctness is particularly critical in scenarios where software failure could endanger lives or result in significant economic loss.
+While traditional testing provides assurance regarding specific known scenarios, it cannot exhaustively rule out forgotten edge cases.
+Formal verification is valuable precisely because it allows us to rule out entire classes of erroneous behaviors rather than just isolated instances.
+Although programs can be verified using manual mathematical proofs, such a process is tedious, labor-intensive, and prone to human error.
+Consequently, there are increasing efforts to mechanize and automate the verification process using specialized software tools.
+% TODO ref?
+
+
 \section{Translational Program Verifiers}
 
-Program verification is a field in computer science
-that aims to mathematically prove that a program is \emph{correct}.
-Correctness in this context means that a program's behavior satisfies specified conditions under a set of defined assumptions. % TODO ref
-For example, this involves proving that a sorting algorithm genuinely produces a non-decreasing sequence,
-that all initial elements are contained in the result, and that no additional elements are introduced.
-While this can be done via manual mathematical proofs,
-there are increasing efforts to mechanize and automate the verification process using computers.
-
-Modern program verifiers are translational, meaning they take a higher-level specification or language
-and translate it into a lower-level language with simpler instructions.
+One way to build such tools is using \emph{translational} program verifiers.
+They take a higher-level specification or language
+and translate it into a lower-level language with simpler specifications.
 This process operates analogously to a compiler. % TODO ref
 For instance, just as a C++ compiler takes a program written in C++, translates it into LLVM IR, and finally compiles it into x86 assembly,
-a translational verifier breaks down complex programmatic proofs into simpler logical assertions.
+a translational verifier breaks down complex programmatic specifications into simpler logical assertions and assumptions.
 
 For verification, one might take a practical programming language, such as Python,
 and instrument it with specified pre- and postconditions.
 A tool like Nagini\footnote{\url{https://www.pm.inf.ethz.ch/research/nagini.html}}
-can then take the instrumented Python program as input and produce an equivalent program in Viper.
-\footnote{\url{https://www.pm.inf.ethz.ch/research/viper.html}}
+can then take the instrumented Python program as input and produce an equivalent program in Viper
+\footnote{\url{https://www.pm.inf.ethz.ch/research/viper.html}}.
 Viper is an Intermediate Verification Language (IVL) that helps mitigate the task of building a custom verification tool
 for every programming language by handling the core verification logic that is shared across languages.
 This is similar to how LLVM simplifies building a compiler by providing a unified target language before assembly. 
 
 Viper programs may then\footnote{Viper also offers an alternative verification backend using symbolic execution.} be translated into another IVL called Boogie\footnote{\url{https://github.com/boogie-org/boogie}}.
 These Boogie programs are ultimately translated into Verification Conditions (VCs)
-formulated in the SMT format,\footnote{\url{https://smt-lib.org/}}which is a standardized way to represent mathematical formulas.
-These VCs can then be checked by an SMT solver, such as Z3.\footnote{\url{https://www.microsoft.com/en-us/research/project/z3-3/}}
-Another prominent IVL that targets Boogie as its backend is Dafny.\footnote{\url{https://dafny.org/}}
+formulated in the SMT format\footnote{\url{https://smt-lib.org/}}, which is a standardized way to represent mathematical formulas.
+These VCs can then be checked by an SMT solver, such as Z3\footnote{\url{https://www.microsoft.com/en-us/research/project/z3-3/}}.
+Another prominent IVL that targets Boogie as its backend is Dafny\footnote{\url{https://dafny.org/}}.
 
 
 \begin{figure}[t]
@@ -49,8 +53,8 @@ While there exist theoretical justifications for why certain verification approa
 there are seldom formal guarantees about their actual software implementations.
 Ideally, we want a mechanism to prove that if the output of a translation is verifiable,
 then the input program is guaranteed to be correct as well.
-Providing these foundational guarantees is the primary motivation behind the Viper Roots project.
-\footnote{\url{https://www.pm.inf.ethz.ch/research/roots.html}}
+Providing these foundational guarantees is the primary goal behind the Viper Roots project
+\footnote{\url{https://www.pm.inf.ethz.ch/research/roots.html}}.
 
 There has been significant prior work in this space by Parthasarathy et al.~\cite{parthasarathy2021formally}, 
 specifically targeting the Boogie-to-SMT segment of the verification pipeline.
@@ -69,14 +73,14 @@ Expanding the supported subset to cover a broader range of real-world Boogie pro
 
 This project makes the following contributions:
 
-\paragraph{Updating the Codebase.} The previous iteration of the certification pipeline was based on an outdated version of Boogie.
+\paragraph{Updating the Codebase} The previous iteration of the certification pipeline was based on an outdated version of Boogie.
 We updated the architecture and proof generation module to be compatible with a newer release.
 
-\paragraph{Usage of Boogie by Dafny.} We analyzed which missing Boogie features Dafny relies on most heavily in order to prioritize the next features for formalization.
+\paragraph{Identifying the usage of Boogie by Dafny} We analyzed which missing Boogie features Dafny relies on most heavily in order to prioritize the next features for formalization.
 
-\paragraph{Map Semantics.} We designed and implemented formal semantics for Boogie maps that successfully support a practical subset of use cases.
+\paragraph{Map Semantics} We designed and implemented formal semantics for Boogie maps that successfully support a practical subset of use cases.
 
-\paragraph{Proof Generation.} We implemented rudimentary proof automation and generation capable of certifying Boogie programs that use maps. 
+\paragraph{Proof Generation} We implemented rudimentary proof automation and generation capable of certifying Boogie programs that use maps. 
 This serves as a successful proof of concept for our approach, which we evaluated against a suite of custom test cases.
 
 
