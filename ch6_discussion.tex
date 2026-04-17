@@ -30,7 +30,7 @@ procedure p ()
 
 \subsection{Newly Supported Boogie Tests}
 
-The prior work \cite{parthasarathy2021formally} included seven external benchmarks, that initially used maps.
+The prior work \cite{parthasarathy2021formally} included seven external benchmarks \cite{chen2017triggerless}, that initially used maps.
 They rewrote it to avoid using maps, and used it as additional tests.
 We used the original tests, rewrote them to avoid the convenient map assign operator,
 and run our tool.
@@ -99,6 +99,8 @@ We want to see if this change alone leads to less verification by Boogie
 So we tested it with the Boogie and Dafny test suit and compared it
 with a Boogie version without this change:
 
+[TODO rephrase] The prior work \cite{parthasarathy2021formally} included seven external benchmarks \cite{chen2017triggerless}, that initially used maps.
+
 [TODO evaluation still to be done]
 
 
@@ -142,7 +144,7 @@ and that \emph{at least one} domain type has a level of exactly $n-1$.
 This extension should still satisfy our desired properties.
 Alternatively, if this structural change proves unviable,
 multi-arity maps can be handled via an automatic front-end transformation to single-arity maps,
-essentially treating the multi-key syntax as syntactic sugar.
+essentially treating the multi-arity syntax as syntactic sugar.
 
 
 \subsection{No Map Assign Statement}
@@ -328,7 +330,7 @@ suggesting that one might safely restrict the generality of map semantics to acc
 
 \subsection{Monomorphic Type Encoding}
 
-The entire proof generation module currently relies on Boogie's polymorphic type encoding.
+The entire proof generation module currently relies on Boogie's predicate type encoding.
 At the time of the prior work, this was the default encoding;
 however, the default has since switched to monomorphic type encoding.
 Adapting the proof generation to support monomorphic type encoding could significantly benefit map semantics.

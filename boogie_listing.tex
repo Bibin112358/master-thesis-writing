@@ -1,0 +1,56 @@
+%% from Gemini
+
+\usepackage{listings}
+\usepackage{xcolor}
+
+%% Define Boogie language for listings 
+\lstdefinelanguage{Boogie}{
+  % Main keywords
+  keywords={procedure, implementation, function,
+  type, const, axiom, forall, var,
+  returns, invariant, ensures, requires, modifies, free},
+  keywordstyle=\color{blue}\bfseries,
+  % Verification keywords
+  keywords=[2]{assert, assume, havoc, if, else, while, call, return},
+  keywordstyle=[2]{\color{violet}\bfseries},
+  % Types
+  keywords=[3]{bool, int, real, bv},
+  keywordstyle=[3]{\color{green!40!blue}\ttfamily},
+  % remaining
+  sensitive=true,
+  morecomment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  morestring=[b]",
+}
+
+%% color numbers
+\newcommand{\colorNumbers}[1]{\textcolor{green!40!gray}{#1}}
+
+\lstset{
+  literate=%
+    {0}{{{\colorNumbers{0}}}}1
+    {1}{{{\colorNumbers{1}}}}1
+    {2}{{{\colorNumbers{2}}}}1
+    {3}{{{\colorNumbers{3}}}}1
+    {4}{{{\colorNumbers{4}}}}1
+    {5}{{{\colorNumbers{5}}}}1
+    {6}{{{\colorNumbers{6}}}}1
+    {7}{{{\colorNumbers{7}}}}1
+    {8}{{{\colorNumbers{8}}}}1
+    {9}{{{\colorNumbers{9}}}}1
+    % Add brackets here too if needed
+}
+
+
+%% Optional: Set a global style for your code
+\lstset{
+  language=Boogie,
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{blue}\bfseries,
+  commentstyle=\color{green!50!black}\itshape,
+  stringstyle=\color{red},
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  frame=single,
+  breaklines=true,
+}

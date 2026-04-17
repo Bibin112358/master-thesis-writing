@@ -9,10 +9,10 @@ Given the elapsed time and the major version jump, substantial changes to the Bo
 \section{Default Type Encoding Change}
 \label{sec:default-type-encoding}
 
-One highly relevant change between these versions is that the default type encoding in Boogie shifted from polymorphic to monomorphic.
-The proof generation module currently provides better support for polymorphic type encoding,
+One highly relevant change between these versions is that the default type encoding in Boogie shifted from predicate to monomorphic.
+The proof generation module currently provides better support for predicate type encoding,
 as explained later in Section~\ref{sec:type-encoding}.
-Consequently, it is strictly necessary to explicitly pass the polymorphic option flag (\texttt{/typeEncoding:p})
+Consequently, it is strictly necessary to explicitly pass the predicate option flag (\texttt{/typeEncoding:p})
 to ensure the tool exhibits the same behavior as the older version.
 
 \section{Checking SMT Changes}
@@ -28,7 +28,7 @@ Most files only showed variations in the inclusion or ordering of SMT options, r
 Because these options assist the SMT solver's internal satisfiability heuristics, they fall outside the concern of the proof generation logic.
 
 However, a few files did exhibit changes to the VC.
-These mostly concerned polymorphic type axioms, such as:
+These mostly concerned predicate type axioms, such as:
 
 \begin{verbatim}
   (forall ((x T@U) )  (=> (= (type x) intType) (= (int_2_U (U_2_int x)) x)))

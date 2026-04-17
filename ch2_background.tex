@@ -23,9 +23,8 @@ We will not delve too deeply into the specific details of the language here,
 but rather refer interested readers to the resources mentioned earlier.
 The following example provides a sense of the language's syntax:
 
-\begin{verbatim}
-// code inspired by Dafny's encoding
 
+\begin{lstlisting}[caption={Example Boogie code (inspired by Dafny's encoding)}]
 type Array _ _;
 function lookup<Dom, Ran> (a: Array Dom Ran, i: Dom) : Ran;
 
@@ -74,7 +73,7 @@ procedure foo() returns (b: Box)
 
     assert read(H, r, f) == b1;
 }
-\end{verbatim}
+\end{lstlisting}
 
 
 As seen in the example, the function \texttt{lookup} includes type parameters enclosed in \texttt{<>},
@@ -299,7 +298,7 @@ providing clear formal targets that the semantics must achieve.
 Supporting maps introduces additional functions and axioms to the VC,
 governing map types and behaviors.
 These axioms differ significantly depending on the type encoding used.
-Since the prior work relies on polymorphic type encoding,
+Since the prior work relies on predicate type encoding,
 we focus strictly on its specific encoding of maps.
 The following represents the map-relevant portions of the VC.
 

@@ -856,7 +856,7 @@ Furthermore, bounded quantifiers in proofs required explicit type constraints (e
 to prevent Isabelle from overly generalizing lemmas with fresh type variables.
 
 On the C\# side, the proof generation module was updated to handle the new map cases.
-Because map type constructors use the same VC encoding mechanisms as abstract value constructors under the polymorphic type encoding,
+Because map type constructors use the same VC encoding mechanisms as abstract value constructors under the predicate type encoding,
 we introduced specific string-matching logic to isolate constructors prefixed with \texttt{MapType}.
 Finally, the C\# module was updated to generate proof steps that invoke our new map semantics lemmas
 and to use the constrained \texttt{'a wf\_val} type.
