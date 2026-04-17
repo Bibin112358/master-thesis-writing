@@ -139,8 +139,8 @@ and that either the domain or range resided at its maximal potential level.
 Using the well-formed type definition and inductive structure described in Section~\ref{sec:wf-definition},
 it should be possible to natively support multi-arity maps.
 This would require changing the domain representation to a list of types,
-while \texttt{FunL} would take a list of values as its domain.
-The crucial adjustment in \texttt{wf\_L} would be ensuring that \emph{all} domain types have levels of at most $n-1$,
+while \isa{FunL} would take a list of values as its domain.
+The crucial adjustment in \isa{wf{\isacharunderscore}{\kern0pt}L} would be ensuring that \emph{all} domain types have levels of at most $n-1$,
 and that \emph{at least one} domain type has a level of exactly $n-1$.
 This extension should still satisfy our desired properties.
 Alternatively, if this structural change proves unviable,
@@ -156,13 +156,13 @@ extending the formal semantics to handle it natively would provide stronger corr
 \subsection{Type Helper for Maps}
 Certain components of the foundational Boogie semantics manage type inference and type safety.
 These components must be explicitly extended to accommodate map cases.
-Once this infrastructure is complete, the corresponding map cases can be implemented within the \texttt{ML} proof tactics that handle types.
+Once this infrastructure is complete, the corresponding map cases can be implemented within the \isakeywordONE{ML} proof tactics that handle types.
 This enhancement would allow a strictly larger subset of generated proofs to successfully verify.
 
 \subsection{Current Automatic Proof Tactic Strength}
 Currently, there is only rudimentary support for maps within the automated proof tactics.
 We have included specific integer and boolean lemmas to verify common, simple use cases.
-A deeper understanding of the existing \texttt{ML} tactics and extending them in a more general, exhaustive manner
+A deeper understanding of the existing \isakeywordONE{ML} tactics and extending them in a more general, exhaustive manner
 is necessary to increase the verification success rate of generated proofs.
 
 % \subsection{Non-trivial semantics}
@@ -199,12 +199,12 @@ m := (lambda x: int :: if i > 0 then 1 else -1);
 
 One initial idea involved collecting all types used within the input Boogie program
 and using this information to generate custom datatypes specific to the program's map types.
-For example, if a Boogie program used an \lstinline[columns=fixed]{[int]int} map, we would model it directly as an \texttt{int => int} function in Isabelle.
-This stands in contrast to our current approach, which uniformly models all map levels using \texttt{'a val0 => 'a val0} functions
+For example, if a Boogie program used an \lstinline[columns=fixed]{[int]int} map, we would model it directly as an \isa{int {\isasymRightarrow} int} function in Isabelle.
+This stands in contrast to our current approach, which uniformly models all map levels using \isa{{\isacharprime}{\kern0pt}a\ val{\isadigit{0}\ {\isasymRightarrow}\ {\isacharprime}{\kern0pt}a\ val{\isadigit{0}}}} functions
 (operating over all primitive values) and enforces type safety via a well-formedness invariant.
 
 A significant hurdle with this approach was the representation of abstract types.
-We later realized that Isabelle's \texttt{typedecl} command could potentially create types corresponding to these abstract types,
+We later realized that Isabelle's \isakeywordONE{typedecl} command could potentially create types corresponding to these abstract types,
 which could then be used to represent the domains and ranges of our maps.
 
 The primary advantage of this approach is that it largely eliminates the need for complex well-formedness definitions.
@@ -213,8 +213,8 @@ The disadvantage, however, is the extensive overhead: one would need to statical
 \subsection{Context/Heap Model}
 
 Another early concept was to maintain a separate global structure (a "heap") containing all maps,
-accessed via a unique identifier (e.g., \texttt{maps :: int => val => val}).
-Under this model, a map value would merely store a reference, such as \texttt{MapV int}.
+accessed via a unique identifier (e.g., \isa{maps :: int {\isasymRightarrow} val {\isasymRightarrow} val}).
+Under this model, a map value would merely store a reference, such as \isa{MapV int}.
 This structure would have to be passed throughout the semantics and updated upon every map modification.
 
 We discarded this approach because it introduces stateful complexity to the semantic model.
@@ -252,8 +252,8 @@ The most theoretically robust alternative is a deep embedding.
 Our chosen solution is a shallow embedding, mapping Boogie maps directly to preexisting Isabelle functions.
 Conversely, a deep embedding would model Boogie maps as expressions featuring explicit variable bindings.
 Boogie maps closely mirror the lambda calculus:
-Map selection (\lstinline[columns=fixed]{m[k]}) corresponds to function application (\texttt{m k}),
-map storage (\lstinline[columns=fixed]{m[k := v]}) corresponds to functional update (\texttt{$\lambda$x. if x = k then v else m x}),
+Map selection (\lstinline[columns=fixed]{m[k]}) corresponds to function application (\isa{m k}),
+map storage (\lstinline[columns=fixed]{m[k := v]}) corresponds to functional update (\isa{\isasymlambda x. if x = k then v else m x}),
 and lambda expressions map directly to $\lambda$-abstractions.
 With the inclusion of polymorphic map types (Section~\ref{sec:semantics-boogie-maps}), the type system closely resembles System F. % TODO ref
 Therefore, the formal semantics of Boogie maps could be explicitly formalized as an implementation of System F.
@@ -301,7 +301,7 @@ it is an important development to monitor for future formalization projects.
 One of the most compelling features of Boogie maps is the ability to assign lambda expressions to them (see Section~\ref{sec:semantics-boogie-maps}).
 The current semantics have laid the groundwork, but substantial effort is still required to fully support this feature.
 Naturally, one would first need to introduce a lambda expression datatype into the semantics.
-The more complex task involves transforming this lambda expression into a function that fits the \texttt{FunL} constructor,
+The more complex task involves transforming this lambda expression into a function that fits the \isa{FunL} constructor,
 and subsequently converting it into a valid, well-formed map value.
 The primary challenge lies in formally proving that the resulting transformation satisfies all desired well-formedness properties,
 while ensuring the intended functional behavior is accurately captured.
@@ -344,7 +344,7 @@ Leveraging these restrictions could facilitate a simpler formulation of the map 
 A natural direction for future work is addressing the limitations outlined in Section~\ref{sec:limitations}.
 This includes natively supporting multi-arity maps, implementing the convenient map assignment syntax,
 formally verifying map-related type safety lemmas,
-and strengthening the \texttt{ML} proof tactics to enable a higher rate of automated proof verification.
+and strengthening the \isakeywordONE{ML} proof tactics to enable a higher rate of automated proof verification.
 
 \subsection{Extending Map Nesting Levels}
 

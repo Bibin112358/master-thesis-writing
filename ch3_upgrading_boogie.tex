@@ -46,7 +46,7 @@ forall ((x T@U) )
 
 This specific axiom asserts that converting an integer to a boxed value and back preserves its identity.
 In older Boogie versions, these axioms were generated for \emph{every} type, whereas newer versions only generate them for types explicitly used in the input program.
-Furthermore, Boogie dropped type ordering entirely,\footnote{\texttt{https://github.com/boogie-org/boogie/pull/667/}}
+Furthermore, Boogie dropped type ordering entirely,\footnote{\url{https://github.com/boogie-org/boogie/pull/667/}}
 which is advantageous, as these orderings were previously deleted manually by the proof generation module.
 Both of these changes appeared compatible with the existing Proofgen architecture.
 \footnote{Later (in Section~\ref{sec:smt-change}), we discovered that four test cases did contain a minor but significant structural change affecting proof generation. Because all files had textual differences and the affected cases also contained polymorphic type axioms, this specific logical difference was difficult to spot in advance.}
@@ -106,8 +106,7 @@ The test run yielded 9 failures. Five of these were known failures inherited fro
 
 By analyzing the SMT output of one of the failing tests, we identified a structural difference we had previously missed:
 
-% TODO word diff colouring
-% simplify irrelevant details away
+% word diff colouring?
 \begin{lstlisting}[language=SMT, numbers=none,
 caption={SMT type axiom excerpt}]
 ; Old VC Output
@@ -120,7 +119,7 @@ forall ((m T@U) (k Int) (v Int) )
   (= (type (q@store m k v)) IntMapType))
 \end{lstlisting}
 
-The SMT-encoded axiom had been updated to include an additional antecedent (the implication \texttt{=>}).
+The SMT-encoded axiom had been updated to include an additional antecedent (the implication \lstinline[columns=fixed, language=SMT]{=>}).
 Using \texttt{git bisect}, we traced this change back to a specific Boogie Pull Request.\footnote{\url{https://github.com/boogie-org/boogie/pull/749}}
 
 Fortunately, fixing the corresponding Isabelle proof was straightforward.
@@ -128,21 +127,26 @@ The existing method in Isabelle responsible for resolving goals related to this 
 Because the structure had changed via the addition of the antecedent, the rigid proof method failed.
 We replaced it with a more flexible proof method, resolving the issue:
 
-\begin{verbatim}
-(* In VCExprHelper.thy *)
-
-(* Old rigid method *)
-method fun_output_axiom uses NonEmptyTypes =
-( (simp add: Let_def),(rule allI)+, (simp split: option.split),
-  (rule conjI), (rule impI), (rule val_of_closed_type_correct[OF NonEmptyTypes]),
-  assumption, rule allI, rule impI
-)
-
-(* New flexible method *)
-method fun_output_axiom uses NonEmptyTypes =
-( (auto simp add: Let_def split: option.split
-  intro: val_of_closed_type_correct[OF NonEmptyTypes]) )
-\end{verbatim}
+\begin{isabellebody}
+\begin{isamarkuptext}%
+(* In VCExprHelper.thy *)%
+\end{isamarkuptext}\isamarkuptrue%
+\isakeywordONE{method}\isamarkupfalse%
+\ fun{\isacharunderscore}{\kern0pt}output{\isacharunderscore}{\kern0pt}axiom{\isacharprime}{\kern0pt}\ \isakeywordTWO{uses}\ NonEmptyTypes\ {\isacharequal}{\kern0pt}\isanewline
+{\isacharparenleft}{\kern0pt}\ {\isacharparenleft}{\kern0pt}simp\ add{\isacharcolon}{\kern0pt}\ Let{\isacharunderscore}{\kern0pt}def{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}{\isacharparenleft}{\kern0pt}rule\ allI{\isacharparenright}{\kern0pt}{\isacharplus}{\kern0pt}{\isacharcomma}{\kern0pt}\ {\isacharparenleft}{\kern0pt}simp\ split{\isacharcolon}{\kern0pt}\ option{\isachardot}{\kern0pt}split{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+\ \ {\isacharparenleft}{\kern0pt}rule\ conjI{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ {\isacharparenleft}{\kern0pt}rule\ impI{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+\ \ {\isacharparenleft}{\kern0pt}rule\ val{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}closed{\isacharunderscore}{\kern0pt}type{\isacharunderscore}{\kern0pt}correct{\isacharbrackleft}{\kern0pt}OF\ NonEmptyTypes{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+\ \ assumption{\isacharcomma}{\kern0pt}\ rule\ allI{\isacharcomma}{\kern0pt}\ rule\ impI{\isacharparenright}{\kern0pt}\isanewline
+%
+\ \isamarkupcmt{Old rigid method}\isanewline
+\isanewline
+\isakeywordONE{method}\isamarkupfalse%
+\ fun{\isacharunderscore}{\kern0pt}output{\isacharunderscore}{\kern0pt}axiom\ \isakeywordTWO{uses}\ NonEmptyTypes\ {\isacharequal}{\kern0pt}\isanewline
+{\isacharparenleft}{\kern0pt}\ {\isacharparenleft}{\kern0pt}auto\ simp\ add{\isacharcolon}{\kern0pt}\ Let{\isacharunderscore}{\kern0pt}def\ split{\isacharcolon}{\kern0pt}\ option{\isachardot}{\kern0pt}split\isanewline
+\ \ intro{\isacharcolon}{\kern0pt}\ val{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}closed{\isacharunderscore}{\kern0pt}type{\isacharunderscore}{\kern0pt}correct{\isacharbrackleft}{\kern0pt}OF\ NonEmptyTypes{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharparenright}{\kern0pt}\isanewline
+%
+\ \isamarkupcmt{New flexible method}
+\end{isabellebody}
 
 We verified the usage of this method across the repository\footnote{\lstinline[language=bash, columns=fixed]{grep "fun\_output\_axiom" proofs\_dir -r}}
 and confirmed that only the four failing proofs relied upon it.
